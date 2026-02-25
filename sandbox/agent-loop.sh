@@ -86,9 +86,16 @@ while true; do
         EVENT_SUMMARY=$(echo "$line" | jq -r '.part.state.title // .part.tool // "tool call"' 2>/dev/null)
         ACTION_COUNT=$((ACTION_COUNT + 1))
         ;;
+      tool_result)
+        EVENT_SUMMARY=$(echo "$line" | jq -r '.part.state.title // "result"' 2>/dev/null | head -c 200)
+        ;;
       error)
         EVENT_SUMMARY=$(echo "$line" | jq -r '.error.data.message // "error"' 2>/dev/null)
         ERROR_COUNT=$((ERROR_COUNT + 1))
+        ;;
+      step_start|step_finish)
+        # Skip verbose step boundary events
+        continue
         ;;
       *)
         EVENT_SUMMARY="$EVENT_TYPE event"

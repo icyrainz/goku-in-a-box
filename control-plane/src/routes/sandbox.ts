@@ -5,7 +5,12 @@ export function sandboxRoutes(manager: SandboxManager) {
   const app = new Hono();
 
   app.post("/start", async (c) => {
-    const containerId = await manager.start();
+    const env: Record<string, string> = {};
+    for (const key of ["LLM_API_KEY", "LLM_BASE_URL", "OPENCODE_MODEL", "ITERATION_SLEEP"]) {
+      const val = process.env[key];
+      if (val) env[key] = val;
+    }
+    const containerId = await manager.start(env);
     return c.json({ containerId, status: "started" });
   });
 

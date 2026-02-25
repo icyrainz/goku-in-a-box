@@ -5,17 +5,29 @@ import type { WsBroadcaster } from "../ws";
 export function telemetryRoutes(db: ReturnType<typeof createDb>, broadcaster: WsBroadcaster) {
   const app = new Hono();
 
+  const knownIterations = new Set<number>();
+
   app.post("/stream", async (c) => {
     const body = await c.req.json<{
       iterationId: number;
       events: { type: string; summary: string; timestamp?: string }[];
     }>();
 
+    // Auto-create iteration row if we haven't seen this ID
+    if (!knownIterations.has(body.iterationId)) {
+      if (!db.getIteration(body.iterationId)) {
+        db.startIteration();
+      }
+      knownIterations.add(body.iterationId);
+    }
+
+    const dbIterationId = body.iterationId;
+
     for (const event of body.events) {
-      db.insertEvent(body.iterationId, event.type, event.summary);
+      db.insertEvent(dbIterationId, event.type, event.summary);
       broadcaster.broadcast({
         type: event.type,
-        data: { iterationId: body.iterationId, summary: event.summary },
+        data: { iterationId: dbIterationId, summary: event.summary },
         timestamp: event.timestamp,
       });
     }
