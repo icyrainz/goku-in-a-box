@@ -1,0 +1,16 @@
+services:
+  control-plane:
+    build: ./control-plane
+    ports:
+      - "3000:3000"
+    volumes:
+      - ./data:/app/data
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - NODE_ENV=production
+  dashboard:
+    build: ./dashboard
+    ports:
+      - "5173:5173"
+    depends_on:
+      - control-plane
