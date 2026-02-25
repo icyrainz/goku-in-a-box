@@ -7,6 +7,7 @@ import { DockerClient } from "./docker";
 import { SandboxManager } from "./sandbox";
 import { WsBroadcaster } from "./ws";
 import { LogStore } from "./logs";
+import { createLlm } from "./llm";
 import { promptRoutes } from "./routes/prompt";
 import { sandboxRoutes } from "./routes/sandbox";
 import { telemetryRoutes } from "./routes/telemetry";
@@ -17,6 +18,21 @@ const sandbox = new SandboxManager(docker);
 const broadcaster = new WsBroadcaster();
 const logs = new LogStore("data/logs");
 
+// Control plane LLM (for summaries, etc.) — separate from sandbox LLM
+const cpLlm = process.env.CP_LLM_BASE_URL
+  ? createLlm({
+      baseUrl: process.env.CP_LLM_BASE_URL,
+      apiKey: process.env.CP_LLM_API_KEY ?? "",
+      model: process.env.CP_LLM_MODEL ?? "default",
+    })
+  : process.env.LLM_BASE_URL
+    ? createLlm({
+        baseUrl: process.env.LLM_BASE_URL,
+        apiKey: process.env.LLM_API_KEY ?? "",
+        model: process.env.CP_LLM_MODEL ?? "Qwen3.5-27B",
+      })
+    : undefined;
+
 const app = new Hono();
 
 app.use("*", logger());
@@ -25,7 +41,7 @@ app.use("*", cors());
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/api/prompt", promptRoutes(db));
 app.route("/api/sandbox", sandboxRoutes(sandbox));
-app.route("/api/telemetry", telemetryRoutes(db, broadcaster));
+app.route("/api/telemetry", telemetryRoutes(db, broadcaster, cpLlm));
 
 app.get(
   "/ws/live",

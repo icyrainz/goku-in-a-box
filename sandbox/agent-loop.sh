@@ -32,7 +32,11 @@ collect_vitals() {
 
 # --- Main loop ---
 PREV_PROMPT=""
-ITERATION=0
+
+# Resume iteration count from control plane to avoid collisions after restart
+LATEST_ID=$(curl -sf "$CONTROL_PLANE_URL/api/telemetry/iterations?limit=1" | jq -r '.iterations[0].id // 0' 2>/dev/null || echo "0")
+ITERATION=${LATEST_ID:-0}
+log "Resuming from iteration $ITERATION"
 
 while true; do
   ITERATION=$((ITERATION + 1))
@@ -70,11 +74,8 @@ while true; do
   ACTION_COUNT=0
   ERROR_COUNT=0
 
-  opencode run \
-    --attach "http://localhost:$OPENCODE_PORT" \
-    --format json \
-    "$(echo -e "$INSTRUCTION")" 2>/dev/null | while IFS= read -r line; do
-
+  # Use process substitution to avoid subshell variable scoping
+  while IFS= read -r line; do
     EVENT_TYPE=$(echo "$line" | jq -r '.type // "unknown"' 2>/dev/null || echo "unknown")
     EVENT_SUMMARY=""
 
@@ -106,7 +107,10 @@ while true; do
       -H "Content-Type: application/json" \
       -d "{\"iterationId\": $ITERATION, \"events\": [{\"type\": \"$EVENT_TYPE\", \"summary\": $(echo "$EVENT_SUMMARY" | jq -Rs .)}]}" \
       > /dev/null 2>&1 || true
-  done
+  done < <(opencode run \
+    --attach "http://localhost:$OPENCODE_PORT" \
+    --format json \
+    "$(echo -e "$INSTRUCTION")" 2>/dev/null || true)
 
   # 6. Report end-of-iteration summary + vitals
   VITALS=$(collect_vitals)

@@ -1,8 +1,13 @@
 import { Hono } from "hono";
 import type { createDb } from "../db";
 import type { WsBroadcaster } from "../ws";
+import type { createLlm } from "../llm";
 
-export function telemetryRoutes(db: ReturnType<typeof createDb>, broadcaster: WsBroadcaster) {
+export function telemetryRoutes(
+  db: ReturnType<typeof createDb>,
+  broadcaster: WsBroadcaster,
+  llm?: ReturnType<typeof createLlm>,
+) {
   const app = new Hono();
 
   const knownIterations = new Set<number>();
@@ -55,6 +60,27 @@ export function telemetryRoutes(db: ReturnType<typeof createDb>, broadcaster: Ws
         vitals: body.vitals,
       },
     });
+
+    // Fire-and-forget: generate LLM summary and update
+    if (llm) {
+      const iterationId = body.iterationId;
+      const actionCount = body.actionCount;
+      const errorCount = body.errorCount;
+      const events = db.getEventsByIteration(iterationId);
+      console.log(`[llm] Summarizing iteration ${iterationId} with ${events.length} events...`);
+      llm.summarizeIteration(iterationId, events).then((summary) => {
+        console.log(`[llm] Iteration ${iterationId} summary: "${summary}"`);
+        if (summary) {
+          db.endIteration(iterationId, summary, actionCount, errorCount);
+          broadcaster.broadcast({
+            type: "iteration_summary",
+            data: { iterationId, summary },
+          });
+        }
+      }).catch((err) => {
+        console.error(`[llm] Summary failed for iteration ${iterationId}:`, err);
+      });
+    }
 
     return c.json({ ok: true });
   });

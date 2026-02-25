@@ -13,7 +13,7 @@ const EVENT_COLORS: Record<string, string> = {
   connected: "text-purple-400",
 };
 
-const HIDDEN_EVENTS = new Set(["step_start", "step_finish"]);
+const HIDDEN_EVENTS = new Set(["step_start", "step_finish", "connected"]);
 
 export function LiveStream() {
   const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/live`;
@@ -45,9 +45,11 @@ export function LiveStream() {
               [{event.type}]
             </span>
             <span className="text-gray-300 truncate">
-              {typeof event.data === "object" && event.data !== null
-                ? (event.data as any).summary ?? JSON.stringify(event.data)
-                : String(event.data)}
+              {event.data == null
+                ? ""
+                : typeof event.data === "object"
+                  ? (event.data as any).summary ?? JSON.stringify(event.data)
+                  : String(event.data)}
             </span>
           </div>
         ))}
