@@ -5,15 +5,17 @@ import { upgradeWebSocket, websocket } from "hono/bun";
 import { createDb } from "./db";
 import { DockerClient } from "./docker";
 import { SandboxManager } from "./sandbox";
+import { WsBroadcaster } from "./ws";
+import { LogStore } from "./logs";
 import { promptRoutes } from "./routes/prompt";
 import { sandboxRoutes } from "./routes/sandbox";
 import { telemetryRoutes } from "./routes/telemetry";
-import { WsBroadcaster } from "./ws";
 
 const db = createDb("data/sandbox.db");
 const docker = new DockerClient();
 const sandbox = new SandboxManager(docker);
 const broadcaster = new WsBroadcaster();
+const logs = new LogStore("data/logs");
 
 const app = new Hono();
 
