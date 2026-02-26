@@ -18,23 +18,33 @@ export function telemetryRoutes(
       events: { type: string; summary: string; timestamp?: string }[];
     }>();
 
-    // Auto-create iteration row if we haven't seen this ID
+    // Auto-create iteration row with the agent's ID if we haven't seen it
     if (!knownIterations.has(body.iterationId)) {
       if (!db.getIteration(body.iterationId)) {
-        db.startIteration();
+        db.startIteration(body.iterationId);
       }
       knownIterations.add(body.iterationId);
     }
 
     const dbIterationId = body.iterationId;
 
+    let actionCount = 0;
     for (const event of body.events) {
       db.insertEvent(dbIterationId, event.type, event.summary);
+      if (event.type === "tool_use") actionCount++;
       broadcaster.broadcast({
         type: event.type,
         data: { iterationId: dbIterationId, summary: event.summary },
         timestamp: event.timestamp,
       });
+    }
+
+    // Update action count in real-time so the dashboard shows progress
+    if (actionCount > 0) {
+      const iter = db.getIteration(dbIterationId);
+      if (iter) {
+        db.endIteration(dbIterationId, iter.summary ?? "In progress...", iter.action_count + actionCount, iter.error_count);
+      }
     }
 
     return c.json({ received: body.events.length });

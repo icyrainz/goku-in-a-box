@@ -62,7 +62,7 @@ export function createLlm(config: LlmConfig) {
       .map((e) => `[${e.type}] ${e.summary?.trim()}`)
       .join("\n");
 
-    const prompt = `Summarize what happened in this AI agent iteration in one short sentence (under 80 chars). Be specific about what was done, not generic. Just return the summary, nothing else.
+    const prompt = `An AI agent just completed one work iteration. Based on the events below, write a single short sentence describing the PURPOSE or OUTCOME of what happened — not the individual steps. Focus on what was achieved or what goal was being worked toward, not which tools were called or files were read. Return only the summary sentence, nothing else.
 
 Events:
 ${eventLog}`;

@@ -49,6 +49,7 @@ export function createDb(path: string) {
     getLatestPrompt: db.prepare("SELECT * FROM prompt_history ORDER BY id DESC LIMIT 1"),
     getPromptHistory: db.prepare("SELECT * FROM prompt_history ORDER BY id DESC"),
     startIteration: db.prepare("INSERT INTO iterations (start_time) VALUES (datetime('now'))"),
+    startIterationWithId: db.prepare("INSERT OR IGNORE INTO iterations (id, start_time) VALUES (?, datetime('now'))"),
     endIteration: db.prepare(
       "UPDATE iterations SET end_time = datetime('now'), summary = ?, action_count = ?, error_count = ? WHERE id = ?"
     ),
@@ -79,7 +80,11 @@ export function createDb(path: string) {
       return stmts.getPromptHistory.all() as { id: number; content: string; updated_at: string }[];
     },
 
-    startIteration() {
+    startIteration(id?: number) {
+      if (id != null) {
+        stmts.startIterationWithId.run(id);
+        return id;
+      }
       const result = stmts.startIteration.run();
       return Number(result.lastInsertRowid);
     },

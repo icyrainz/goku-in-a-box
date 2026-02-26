@@ -46,14 +46,16 @@ while true; do
   PROMPT_RESPONSE=$(curl -sf "$CONTROL_PLANE_URL/api/prompt" || echo '{"content":""}')
   CURRENT_PROMPT=$(echo "$PROMPT_RESPONSE" | jq -r '.content // ""')
 
-  # 2. Read bootstrap state
+  # 2. Read bootstrap identity and memory
   BOOTSTRAP=$(cat /state/BOOTSTRAP.md 2>/dev/null || echo "No bootstrap state found.")
+  MEMORY=$(cat /workspace/.memory.md 2>/dev/null || echo "No previous memory. This is a fresh start.")
 
   # 3. Compose instruction
-  INSTRUCTION="## Bootstrap State\n$BOOTSTRAP\n\n"
+  INSTRUCTION="## Identity\n$BOOTSTRAP\n\n"
+  INSTRUCTION+="## Memory (from previous iteration)\n$MEMORY\n\n"
 
   if [ -z "$CURRENT_PROMPT" ]; then
-    INSTRUCTION+="## Mode: Self-Bootstrap\nNo prompt has been assigned. Explore your environment, install useful tools, set up your state file at /state/BOOTSTRAP.md, and report readiness."
+    INSTRUCTION+="## Mode: Self-Bootstrap\nNo prompt has been assigned. Prepare to receive tasks."
   else
     INSTRUCTION+="## Current Prompt\n$CURRENT_PROMPT"
 
@@ -62,7 +64,7 @@ while true; do
     fi
   fi
 
-  INSTRUCTION+="\n\n## Instructions\n- Update /state/BOOTSTRAP.md with your progress after completing work.\n- Your working directory is /workspace."
+  INSTRUCTION+="\n\n## Rules\n- This is iteration $ITERATION. Your environment: workdir=/workspace, control-plane=$CONTROL_PLANE_URL.\n- Your memory above tells you what you did last. Pick up EXACTLY where you left off.\n- Do NOT re-explore files you already know about from memory.\n- IMPORTANT: Do as much work as possible in this iteration. Write multiple files, run multiple commands. Do NOT stop after just one or two actions — keep going until you've made significant progress on the current task step.\n- As your FINAL action, write /workspace/.memory.md with:\n  1. What you accomplished this iteration\n  2. Current status of the task\n  3. Concrete next steps for the next iteration\n  This file is your only memory across iterations. Keep it concise."
 
   # 4. Register iteration with control plane
   curl -sf -X POST "$CONTROL_PLANE_URL/api/telemetry/stream" \
@@ -74,6 +76,9 @@ while true; do
   ACTION_COUNT=0
   ERROR_COUNT=0
 
+  # Build opencode run command (fresh session each time, memory file provides continuity)
+  OPENCODE_ARGS=(run --attach "http://localhost:$OPENCODE_PORT" --format json "$(echo -e "$INSTRUCTION")")
+
   # Use process substitution to avoid subshell variable scoping
   while IFS= read -r line; do
     EVENT_TYPE=$(echo "$line" | jq -r '.type // "unknown"' 2>/dev/null || echo "unknown")
@@ -84,7 +89,14 @@ while true; do
         EVENT_SUMMARY=$(echo "$line" | jq -r '.part.text // ""' 2>/dev/null | head -c 200)
         ;;
       tool_use)
-        EVENT_SUMMARY=$(echo "$line" | jq -r '.part.state.title // .part.tool // "tool call"' 2>/dev/null)
+        TOOL_NAME=$(echo "$line" | jq -r '.part.tool // "tool"' 2>/dev/null)
+        TITLE=$(echo "$line" | jq -r '.part.state.title // ""' 2>/dev/null)
+        if [ -n "$TITLE" ] && [ "$TITLE" != "null" ]; then
+          EVENT_SUMMARY="$TOOL_NAME: $TITLE"
+        else
+          INPUT_DETAIL=$(echo "$line" | jq -r '.part.state.input | if type == "object" then (to_entries | map(.key + "=" + (.value | tostring | .[0:80])) | join(", ")) else "" end' 2>/dev/null | head -c 200)
+          EVENT_SUMMARY="$TOOL_NAME${INPUT_DETAIL:+: $INPUT_DETAIL}"
+        fi
         ACTION_COUNT=$((ACTION_COUNT + 1))
         ;;
       tool_result)
@@ -95,7 +107,6 @@ while true; do
         ERROR_COUNT=$((ERROR_COUNT + 1))
         ;;
       step_start|step_finish)
-        # Skip verbose step boundary events
         continue
         ;;
       *)
@@ -107,10 +118,7 @@ while true; do
       -H "Content-Type: application/json" \
       -d "{\"iterationId\": $ITERATION, \"events\": [{\"type\": \"$EVENT_TYPE\", \"summary\": $(echo "$EVENT_SUMMARY" | jq -Rs .)}]}" \
       > /dev/null 2>&1 || true
-  done < <(opencode run \
-    --attach "http://localhost:$OPENCODE_PORT" \
-    --format json \
-    "$(echo -e "$INSTRUCTION")" 2>/dev/null || true)
+  done < <(opencode "${OPENCODE_ARGS[@]}" 2>/dev/null || true)
 
   # 6. Report end-of-iteration summary + vitals
   VITALS=$(collect_vitals)
@@ -119,7 +127,7 @@ while true; do
     -H "Content-Type: application/json" \
     -d "{
       \"iterationId\": $ITERATION,
-      \"summary\": \"Iteration $ITERATION completed\",
+      \"summary\": \"Completed: $ACTION_COUNT actions, $ERROR_COUNT errors\",
       \"actionCount\": $ACTION_COUNT,
       \"errorCount\": $ERROR_COUNT,
       \"vitals\": $VITALS
