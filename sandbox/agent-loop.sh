@@ -79,14 +79,15 @@ while true; do
   # Build opencode run command (fresh session each time, memory file provides continuity)
   OPENCODE_ARGS=(run --attach "http://localhost:$OPENCODE_PORT" --format json "$(echo -e "$INSTRUCTION")")
 
-  # Use process substitution to avoid subshell variable scoping
   while IFS= read -r line; do
     EVENT_TYPE=$(echo "$line" | jq -r '.type // "unknown"' 2>/dev/null || echo "unknown")
     EVENT_SUMMARY=""
+    EVENT_CONTENT=""
 
     case "$EVENT_TYPE" in
       text)
-        EVENT_SUMMARY=$(echo "$line" | jq -r '.part.text // ""' 2>/dev/null | head -c 200)
+        EVENT_CONTENT=$(echo "$line" | jq -r '.part.text // ""' 2>/dev/null)
+        EVENT_SUMMARY=$(echo "$EVENT_CONTENT" | head -c 200)
         ;;
       tool_use)
         TOOL_NAME=$(echo "$line" | jq -r '.part.tool // "tool"' 2>/dev/null)
@@ -97,13 +98,20 @@ while true; do
           INPUT_DETAIL=$(echo "$line" | jq -r '.part.state.input | if type == "object" then (to_entries | map(.key + "=" + (.value | tostring | .[0:80])) | join(", ")) else "" end' 2>/dev/null | head -c 200)
           EVENT_SUMMARY="$TOOL_NAME${INPUT_DETAIL:+: $INPUT_DETAIL}"
         fi
+        EVENT_CONTENT=$(echo "$line" | jq -r '.part.state.input // .part | tostring' 2>/dev/null | head -c 5000)
         ACTION_COUNT=$((ACTION_COUNT + 1))
         ;;
       tool_result)
         EVENT_SUMMARY=$(echo "$line" | jq -r '.part.state.title // "result"' 2>/dev/null | head -c 200)
+        EVENT_CONTENT=$(echo "$line" | jq -r '.part.state.output // .part.state | tostring' 2>/dev/null | head -c 10000)
+        ;;
+      thought)
+        EVENT_CONTENT=$(echo "$line" | jq -r '.part.text // .part | tostring' 2>/dev/null)
+        EVENT_SUMMARY=$(echo "$EVENT_CONTENT" | head -c 200)
         ;;
       error)
         EVENT_SUMMARY=$(echo "$line" | jq -r '.error.data.message // "error"' 2>/dev/null)
+        EVENT_CONTENT=$(echo "$line" | jq -r '.error | tostring' 2>/dev/null | head -c 5000)
         ERROR_COUNT=$((ERROR_COUNT + 1))
         ;;
       step_start|step_finish)
@@ -111,12 +119,21 @@ while true; do
         ;;
       *)
         EVENT_SUMMARY="$EVENT_TYPE event"
+        EVENT_CONTENT=$(echo "$line" | jq -r '. | tostring' 2>/dev/null | head -c 2000)
         ;;
     esac
 
+    # Build JSON payload with jq to handle escaping
+    PAYLOAD=$(jq -n \
+      --argjson iterationId "$ITERATION" \
+      --arg type "$EVENT_TYPE" \
+      --arg summary "$EVENT_SUMMARY" \
+      --arg content "$EVENT_CONTENT" \
+      '{iterationId: $iterationId, events: [{type: $type, summary: $summary, content: $content}]}')
+
     curl -sf -X POST "$CONTROL_PLANE_URL/api/telemetry/stream" \
       -H "Content-Type: application/json" \
-      -d "{\"iterationId\": $ITERATION, \"events\": [{\"type\": \"$EVENT_TYPE\", \"summary\": $(echo "$EVENT_SUMMARY" | jq -Rs .)}]}" \
+      -d "$PAYLOAD" \
       > /dev/null 2>&1 || true
   done < <(opencode "${OPENCODE_ARGS[@]}" 2>/dev/null || true)
 
