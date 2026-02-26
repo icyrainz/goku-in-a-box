@@ -3,7 +3,7 @@ import { fetchJson, postJson } from "../api/client";
 
 type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string };
 
-export function Header({ onPromptClick }: { onPromptClick?: () => void }) {
+export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => void; onFilesClick?: () => void }) {
   const queryClient = useQueryClient();
 
   const { data: status } = useQuery({
@@ -44,6 +44,14 @@ export function Header({ onPromptClick }: { onPromptClick?: () => void }) {
             className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium transition-colors"
           >
             Prompt
+          </button>
+        )}
+        {onFilesClick && (
+          <button
+            onClick={onFilesClick}
+            className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium transition-colors"
+          >
+            Files
           </button>
         )}
         <button
