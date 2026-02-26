@@ -2,10 +2,13 @@ import { describe, it, expect, beforeEach, mock } from "bun:test";
 import { Hono } from "hono";
 import { sandboxRoutes } from "./sandbox";
 import { SandboxManager } from "../sandbox";
+import { WsBroadcaster } from "../ws";
 
 describe("sandbox routes", () => {
   let app: Hono;
   let manager: SandboxManager;
+  let db: any;
+  let broadcaster: WsBroadcaster;
 
   beforeEach(() => {
     manager = new SandboxManager({
@@ -18,9 +21,18 @@ describe("sandbox routes", () => {
       ),
     } as any);
 
-    const db = { closeOpenIterations: mock(() => {}), clearPrompt: mock(() => {}) } as any;
+    db = {
+      closeOpenIterations: mock(() => {}),
+      clearPrompt: mock(() => {}),
+      endAllOpenSessions: mock(() => {}),
+      createSession: mock(() => {}),
+      endSession: mock(() => {}),
+      getActiveSession: mock(() => null),
+      getLatestSession: mock(() => null),
+    } as any;
+    broadcaster = new WsBroadcaster();
     app = new Hono();
-    app.route("/api/sandbox", sandboxRoutes(manager, db));
+    app.route("/api/sandbox", sandboxRoutes(manager, db, broadcaster));
   });
 
   it("GET /status returns not_running when no container", async () => {
@@ -64,5 +76,36 @@ describe("sandbox routes", () => {
     manager.containerId = "abc123";
     const res = await app.request("/api/sandbox/stop", { method: "POST" });
     expect(res.status).toBe(200);
+  });
+
+  it("POST /start creates a session and broadcasts session_start", async () => {
+    const broadcasted: any[] = [];
+    const fakeWs = { send: (m: string) => broadcasted.push(JSON.parse(m)) };
+    broadcaster.register(fakeWs as any);
+
+    await app.request("/api/sandbox/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
+
+    expect(db.endAllOpenSessions).toHaveBeenCalled();
+    expect(db.createSession).toHaveBeenCalledWith("abc123", "opencode");
+    expect(broadcasted.some((e: any) => e.type === "session_start")).toBe(true);
+  });
+
+  it("POST /stop ends the session", async () => {
+    manager.containerId = "abc123";
+    await app.request("/api/sandbox/stop", { method: "POST" });
+    expect(db.endSession).toHaveBeenCalledWith("abc123");
+  });
+
+  it("GET /status includes sessionId", async () => {
+    manager.containerId = null;
+    db.getActiveSession = mock(() => null);
+    db.getLatestSession = mock(() => ({ container_id: "old-container", agent_type: "goose", started_at: "", stopped_at: "" }));
+    const res = await app.request("/api/sandbox/status");
+    const body = (await res.json()) as any;
+    expect(body.sessionId).toBe("old-container");
   });
 });

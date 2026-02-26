@@ -4,6 +4,7 @@ import { createWriteStream, unlinkSync, existsSync, renameSync } from "node:fs";
 import type { SandboxManager, AgentType } from "../sandbox";
 import type { DockerClient } from "../docker";
 import type { createDb } from "../db";
+import type { WsBroadcaster } from "../ws";
 
 const SNAPSHOT_DIR = "data/snapshots";
 
@@ -34,7 +35,8 @@ function buildEnv(agentType: AgentType): Record<string, string> {
 export function snapshotRoutes(
   sandbox: SandboxManager,
   docker: DockerClient,
-  db: ReturnType<typeof createDb>
+  db: ReturnType<typeof createDb>,
+  broadcaster: WsBroadcaster,
 ) {
   const app = new Hono();
 
@@ -134,7 +136,10 @@ export function snapshotRoutes(
     const env = buildEnv(agentType);
 
     db.closeOpenIterations();
+    db.endAllOpenSessions();
     const containerId = await sandbox.restoreStart(agentType, env, tarBytes);
+    db.createSession(containerId, agentType);
+    broadcaster.broadcast({ type: "session_start", data: { containerId, agentType } });
 
     return c.json({ containerId, agentType, snapshotId: id });
   });

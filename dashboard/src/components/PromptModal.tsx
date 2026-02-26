@@ -1,28 +1,30 @@
-import { useState, useEffect } from "react";
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import { useState, useEffect, useCallback } from "react";
 import Editor from "@monaco-editor/react";
 import { fetchJson, putJson } from "../api/client";
 
 type PromptData = { content: string; updated_at: string | null };
 
 export function PromptModal({ onClose }: { onClose: () => void }) {
-  const queryClient = useQueryClient();
+  const [prompt, setPrompt] = useState<PromptData | null>(null);
   const [editing, setEditing] = useState(false);
   const [localContent, setLocalContent] = useState<string | null>(null);
+  const [saving, setSaving] = useState(false);
 
-  const { data: prompt } = useQuery({
-    queryKey: ["prompt"],
-    queryFn: () => fetchJson<PromptData>("/prompt"),
-  });
+  const load = useCallback(() => {
+    fetchJson<PromptData>("/prompt").then(setPrompt);
+  }, []);
 
-  const saveMutation = useMutation({
-    mutationFn: (content: string) => putJson("/prompt", { content }),
-    onSuccess: () => {
-      setLocalContent(null);
-      setEditing(false);
-      queryClient.invalidateQueries({ queryKey: ["prompt"] });
-    },
-  });
+  useEffect(() => { load(); }, [load]);
+
+  const save = async () => {
+    if (!localContent) return;
+    setSaving(true);
+    await putJson("/prompt", { content: localContent });
+    setSaving(false);
+    setLocalContent(null);
+    setEditing(false);
+    load();
+  };
 
   const currentContent = localContent ?? prompt?.content ?? "";
   const isDirty = localContent !== null && localContent !== (prompt?.content ?? "");
@@ -55,11 +57,11 @@ export function PromptModal({ onClose }: { onClose: () => void }) {
             {editing && isDirty && <span className="text-xs text-kitsune font-medium">Unsaved</span>}
             {editing && (
               <button
-                onClick={() => { if (localContent) saveMutation.mutate(localContent); }}
-                disabled={!isDirty || saveMutation.isPending}
+                onClick={save}
+                disabled={!isDirty || saving}
                 className="btn-ink btn-ai text-xs"
               >
-                {saveMutation.isPending ? "Saving..." : "Save"}
+                {saving ? "Saving..." : "Save"}
               </button>
             )}
             <button

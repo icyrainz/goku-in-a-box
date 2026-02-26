@@ -50,7 +50,7 @@ export function IterationTimeline() {
 
   const { data } = useQuery({
     queryKey: ["iterations"],
-    queryFn: () => fetchJson<{ iterations: Iteration[] }>("/telemetry/iterations?limit=50"),
+    queryFn: () => fetchJson<{ iterations: Iteration[] }>("/telemetry/iterations?limit=50&session=current"),
     refetchInterval: 2000,
   });
 

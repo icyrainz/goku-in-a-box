@@ -23,7 +23,8 @@ export function telemetryRoutes(
       if (!db.getIteration(body.iterationId)) {
         // Close any stale iterations left open by a killed container
         db.closeOpenIterations();
-        db.startIteration(body.iterationId);
+        const session = db.getActiveSession();
+        db.startIteration(body.iterationId, session?.container_id);
       }
       knownIterations.add(body.iterationId);
     }
@@ -100,6 +101,16 @@ export function telemetryRoutes(
   app.get("/iterations", (c) => {
     const limit = Number(c.req.query("limit") ?? 20);
     const offset = Number(c.req.query("offset") ?? 0);
+    const sessionParam = c.req.query("session");
+
+    if (sessionParam === "current") {
+      const session = db.getActiveSession() ?? db.getLatestSession();
+      if (session) {
+        return c.json({ iterations: db.getIterationsBySession(session.container_id, limit, offset) });
+      }
+      return c.json({ iterations: [] });
+    }
+
     return c.json({ iterations: db.getIterations(limit, offset) });
   });
 

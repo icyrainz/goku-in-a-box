@@ -3,7 +3,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson, postJson } from "../api/client";
 
 type AgentType = "opencode" | "goose";
-type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string; agentType?: AgentType };
+type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string; agentType?: AgentType; sessionId?: string | null };
 
 export function Header({ onPromptClick, onFilesClick, onSnapshotClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void }) {
   const queryClient = useQueryClient();

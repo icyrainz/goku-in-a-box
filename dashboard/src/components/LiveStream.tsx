@@ -13,6 +13,7 @@ const EVENT_DOT: Record<string, string> = {
   iteration_start: "bg-matcha",
   iteration_end: "bg-matcha",
   iteration_summary: "bg-matcha",
+  session_start: "bg-fuji",
   connected: "bg-fuji",
 };
 
@@ -26,6 +27,7 @@ const BADGE_STYLE: Record<string, string> = {
   iteration_start: "text-matcha bg-matcha/10 border-matcha/20",
   iteration_end: "text-matcha bg-matcha/10 border-matcha/20",
   iteration_summary: "text-matcha bg-matcha/10 border-matcha/20",
+  session_start: "text-fuji bg-fuji/10 border-fuji/20",
   connected: "text-fuji bg-fuji/10 border-fuji/20",
 };
 
@@ -39,6 +41,7 @@ const ACCENT_BORDER: Record<string, string> = {
   iteration_start: "border-matcha/30",
   iteration_end: "border-matcha/30",
   iteration_summary: "border-matcha/30",
+  session_start: "border-fuji/30",
   connected: "border-fuji/30",
 };
 

@@ -35,6 +35,21 @@ export function createDb(path: string) {
   `);
 
   db.run(`
+    CREATE TABLE IF NOT EXISTS sessions (
+      container_id TEXT PRIMARY KEY,
+      agent_type TEXT NOT NULL,
+      started_at TEXT NOT NULL DEFAULT (datetime('now')),
+      stopped_at TEXT
+    )
+  `);
+
+  // Migration: add session_id column to iterations if missing
+  const iterCols = db.prepare("PRAGMA table_info(iterations)").all() as { name: string }[];
+  if (!iterCols.some((c) => c.name === "session_id")) {
+    db.run("ALTER TABLE iterations ADD COLUMN session_id TEXT REFERENCES sessions(container_id)");
+  }
+
+  db.run(`
     CREATE TABLE IF NOT EXISTS events (
       id INTEGER PRIMARY KEY AUTOINCREMENT,
       iteration_id INTEGER REFERENCES iterations(id),
@@ -62,6 +77,14 @@ export function createDb(path: string) {
     getPromptHistory: db.prepare("SELECT * FROM prompt_history ORDER BY id DESC"),
     startIteration: db.prepare("INSERT INTO iterations (start_time) VALUES (datetime('now'))"),
     startIterationWithId: db.prepare("INSERT OR IGNORE INTO iterations (id, start_time) VALUES (?, datetime('now'))"),
+    startIterationWithSession: db.prepare("INSERT OR IGNORE INTO iterations (id, start_time, session_id) VALUES (?, datetime('now'), ?)"),
+    createSession: db.prepare("INSERT INTO sessions (container_id, agent_type) VALUES (?, ?)"),
+    endSession: db.prepare("UPDATE sessions SET stopped_at = datetime('now') WHERE container_id = ?"),
+    endAllOpenSessions: db.prepare("UPDATE sessions SET stopped_at = datetime('now') WHERE stopped_at IS NULL"),
+    getActiveSession: db.prepare("SELECT * FROM sessions WHERE stopped_at IS NULL LIMIT 1"),
+    getLatestSession: db.prepare("SELECT * FROM sessions ORDER BY rowid DESC LIMIT 1"),
+    getSessionByContainerId: db.prepare("SELECT * FROM sessions WHERE container_id = ?"),
+    getIterationsBySession: db.prepare("SELECT * FROM iterations WHERE session_id = ? ORDER BY id DESC LIMIT ? OFFSET ?"),
     endIteration: db.prepare(
       "UPDATE iterations SET end_time = datetime('now'), summary = ?, action_count = ?, error_count = ? WHERE id = ?"
     ),
@@ -106,9 +129,13 @@ export function createDb(path: string) {
       return stmts.getPromptHistory.all() as { id: number; content: string; updated_at: string }[];
     },
 
-    startIteration(id?: number) {
+    startIteration(id?: number, sessionId?: string) {
       if (id != null) {
-        stmts.startIterationWithId.run(id);
+        if (sessionId) {
+          stmts.startIterationWithSession.run(id, sessionId);
+        } else {
+          stmts.startIterationWithId.run(id);
+        }
         return id;
       }
       const result = stmts.startIteration.run();
@@ -160,6 +187,40 @@ export function createDb(path: string) {
 
     closeOpenIterations() {
       stmts.closeOpenIterations.run();
+    },
+
+    createSession(containerId: string, agentType: string) {
+      stmts.createSession.run(containerId, agentType);
+    },
+
+    endSession(containerId: string) {
+      stmts.endSession.run(containerId);
+    },
+
+    endAllOpenSessions() {
+      stmts.endAllOpenSessions.run();
+    },
+
+    getActiveSession() {
+      return stmts.getActiveSession.get() as {
+        container_id: string; agent_type: string; started_at: string; stopped_at: string | null;
+      } | null;
+    },
+
+    getLatestSession() {
+      return stmts.getLatestSession.get() as {
+        container_id: string; agent_type: string; started_at: string; stopped_at: string | null;
+      } | null;
+    },
+
+    getSessionByContainerId(containerId: string) {
+      return stmts.getSessionByContainerId.get(containerId) as {
+        container_id: string; agent_type: string; started_at: string; stopped_at: string | null;
+      } | null;
+    },
+
+    getIterationsBySession(sessionId: string, limit: number, offset: number) {
+      return stmts.getIterationsBySession.all(sessionId, limit, offset) as any[];
     },
 
     insertSnapshot(label: string, agentType: string, filename: string, sizeBytes: number) {

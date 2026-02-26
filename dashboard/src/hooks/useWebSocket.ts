@@ -16,7 +16,11 @@ export function useWebSocket(url: string) {
     ws.onmessage = (e) => {
       try {
         const event = JSON.parse(e.data) as WsEvent;
-        setEvents((prev) => [...prev.slice(-500), event]);
+        if (event.type === "session_start") {
+          setEvents([event]);
+        } else {
+          setEvents((prev) => [...prev.slice(-500), event]);
+        }
       } catch {}
     };
 

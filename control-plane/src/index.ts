@@ -17,8 +17,18 @@ import { snapshotRoutes } from "./routes/snapshots";
 const db = createDb("data/sandbox.db");
 const docker = new DockerClient();
 const sandbox = new SandboxManager(docker);
-sandbox.reconnect().catch(() => {}); // re-attach to running container if any
 const broadcaster = new WsBroadcaster();
+
+// Re-attach to running container if any, and ensure a session exists
+sandbox.reconnect().then(() => {
+  if (sandbox.containerId && sandbox.agentType) {
+    const existing = db.getSessionByContainerId(sandbox.containerId);
+    if (!existing) {
+      db.endAllOpenSessions();
+      db.createSession(sandbox.containerId, sandbox.agentType);
+    }
+  }
+}).catch(() => {});
 const logs = new LogStore("data/logs");
 
 // Control plane LLM (for summaries, etc.) — separate from sandbox LLM
@@ -43,10 +53,10 @@ app.use("*", cors());
 
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/api/prompt", promptRoutes(db));
-app.route("/api/sandbox", sandboxRoutes(sandbox, db));
+app.route("/api/sandbox", sandboxRoutes(sandbox, db, broadcaster));
 app.route("/api/telemetry", telemetryRoutes(db, broadcaster, cpLlm));
 app.route("/api/sandbox/files", filesRoutes(sandbox, docker));
-app.route("/api/snapshots", snapshotRoutes(sandbox, docker, db));
+app.route("/api/snapshots", snapshotRoutes(sandbox, docker, db, broadcaster));
 
 app.get(
   "/ws/live",

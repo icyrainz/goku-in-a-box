@@ -93,4 +93,48 @@ describe("telemetry routes", () => {
     const body = (await res.json()) as any;
     expect(body.vitals).toHaveLength(2);
   });
+
+  it("GET /iterations?session=current returns only current session iterations", async () => {
+    db.createSession("c1", "opencode");
+    db.startIteration(1, "c1");
+    db.startIteration(2, "c1");
+    db.endSession("c1");
+
+    db.createSession("c2", "goose");
+    db.startIteration(3, "c2");
+
+    const res = await app.request("/api/telemetry/iterations?limit=50&session=current");
+    const body = (await res.json()) as any;
+    expect(body.iterations).toHaveLength(1);
+    expect(body.iterations[0].id).toBe(3);
+  });
+
+  it("GET /iterations without session param returns all iterations", async () => {
+    db.createSession("c1", "opencode");
+    db.startIteration(1, "c1");
+    db.startIteration(2);
+
+    const res = await app.request("/api/telemetry/iterations?limit=50");
+    const body = (await res.json()) as any;
+    expect(body.iterations).toHaveLength(2);
+  });
+
+  it("POST /stream auto-tags iteration with active session", async () => {
+    db.createSession("c1", "opencode");
+
+    const res = await app.request("/api/telemetry/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        iterationId: 42,
+        events: [{ type: "thought", summary: "test" }],
+      }),
+    });
+    expect(res.status).toBe(200);
+
+    // Verify iteration is scoped to session
+    const sessionIters = db.getIterationsBySession("c1", 10, 0);
+    expect(sessionIters).toHaveLength(1);
+    expect(sessionIters[0].id).toBe(42);
+  });
 });

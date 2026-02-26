@@ -71,4 +71,61 @@ describe("db", () => {
     const history = db.getPromptHistory();
     expect(history).toHaveLength(3);
   });
+
+  describe("sessions", () => {
+    it("creates and retrieves a session", () => {
+      db.createSession("container-1", "opencode");
+      const session = db.getActiveSession();
+      expect(session).not.toBeNull();
+      expect(session!.container_id).toBe("container-1");
+      expect(session!.agent_type).toBe("opencode");
+      expect(session!.stopped_at).toBeNull();
+    });
+
+    it("ends a session", () => {
+      db.createSession("container-1", "goose");
+      db.endSession("container-1");
+      const session = db.getActiveSession();
+      expect(session).toBeNull();
+      const ended = db.getSessionByContainerId("container-1");
+      expect(ended).not.toBeNull();
+      expect(ended!.stopped_at).not.toBeNull();
+    });
+
+    it("ends all open sessions", () => {
+      db.createSession("c1", "opencode");
+      db.createSession("c2", "goose");
+      db.endAllOpenSessions();
+      expect(db.getActiveSession()).toBeNull();
+    });
+
+    it("getLatestSession returns most recent", () => {
+      db.createSession("c1", "opencode");
+      db.endSession("c1");
+      db.createSession("c2", "goose");
+      db.endSession("c2");
+      const latest = db.getLatestSession();
+      expect(latest!.container_id).toBe("c2");
+    });
+
+    it("starts iteration with session_id", () => {
+      db.createSession("container-1", "opencode");
+      db.startIteration(1, "container-1");
+      const iter = db.getIteration(1);
+      expect(iter).not.toBeNull();
+    });
+
+    it("getIterationsBySession returns only matching iterations", () => {
+      db.createSession("c1", "opencode");
+      db.createSession("c2", "goose");
+      db.startIteration(1, "c1");
+      db.startIteration(2, "c1");
+      db.startIteration(3, "c2");
+      const c1Iters = db.getIterationsBySession("c1", 10, 0);
+      expect(c1Iters).toHaveLength(2);
+      const c2Iters = db.getIterationsBySession("c2", 10, 0);
+      expect(c2Iters).toHaveLength(1);
+      expect(c2Iters[0].id).toBe(3);
+    });
+  });
 });
