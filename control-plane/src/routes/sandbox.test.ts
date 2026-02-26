@@ -29,11 +29,35 @@ describe("sandbox routes", () => {
     expect(body.status).toBe("not_running");
   });
 
-  it("POST /start creates and starts the sandbox", async () => {
-    const res = await app.request("/api/sandbox/start", { method: "POST" });
+  it("POST /start creates and starts the sandbox (default opencode)", async () => {
+    const res = await app.request("/api/sandbox/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({}),
+    });
     const body = await res.json();
     expect(res.status).toBe(200);
     expect(body.containerId).toBe("abc123");
+    expect(body.agentType).toBe("opencode");
+  });
+
+  it("POST /start with agentType=goose starts goose sandbox", async () => {
+    const res = await app.request("/api/sandbox/start", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ agentType: "goose" }),
+    });
+    const body = await res.json();
+    expect(res.status).toBe(200);
+    expect(body.agentType).toBe("goose");
+  });
+
+  it("GET /status includes agentType when running", async () => {
+    await manager.start("opencode", {});
+    const res = await app.request("/api/sandbox/status");
+    const body = await res.json();
+    expect(body.status).toBe("running");
+    expect(body.agentType).toBe("opencode");
   });
 
   it("POST /stop stops the sandbox", async () => {

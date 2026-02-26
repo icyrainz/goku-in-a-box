@@ -1,24 +1,31 @@
 import type { DockerClient } from "./docker";
 
-const SANDBOX_IMAGE = "goku-sandbox:latest";
-const SANDBOX_NAME = "goku-sandbox";
+export type AgentType = "opencode" | "goose";
+
+const IMAGE_MAP: Record<AgentType, string> = {
+  opencode: "goku-sandbox-opencode:latest",
+  goose: "goku-sandbox-goose:latest",
+};
 
 export class SandboxManager {
   containerId: string | null = null;
+  agentType: AgentType | null = null;
   private docker: DockerClient;
 
   constructor(docker: DockerClient) {
     this.docker = docker;
   }
 
-  async start(env: Record<string, string> = {}) {
+  async start(agentType: AgentType = "opencode", env: Record<string, string> = {}) {
     if (this.containerId) {
       await this.stop();
     }
+    const image = IMAGE_MAP[agentType];
+    const containerName = `goku-sandbox-${agentType}`;
     const envArr = Object.entries(env).map(([k, v]) => `${k}=${v}`);
     const { Id } = await this.docker.createContainer({
-      image: SANDBOX_IMAGE,
-      name: SANDBOX_NAME,
+      image,
+      name: containerName,
       env: [
         `CONTROL_PLANE_URL=http://host.docker.internal:3000`,
         ...envArr,
@@ -27,6 +34,7 @@ export class SandboxManager {
     });
     await this.docker.startContainer(Id);
     this.containerId = Id;
+    this.agentType = agentType;
     return Id;
   }
 
@@ -35,6 +43,7 @@ export class SandboxManager {
     await this.docker.stopContainer(this.containerId);
     await this.docker.removeContainer(this.containerId);
     this.containerId = null;
+    this.agentType = null;
   }
 
   async status() {
@@ -44,9 +53,11 @@ export class SandboxManager {
       return {
         status: info.State.Running ? ("running" as const) : ("stopped" as const),
         containerId: this.containerId,
+        agentType: this.agentType,
       };
     } catch {
       this.containerId = null;
+      this.agentType = null;
       return { status: "not_running" as const };
     }
   }
