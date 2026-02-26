@@ -40,7 +40,8 @@ export function createDb(path: string) {
       iteration_id INTEGER REFERENCES iterations(id),
       timestamp TEXT NOT NULL DEFAULT (datetime('now')),
       type TEXT NOT NULL,
-      summary TEXT
+      summary TEXT,
+      content TEXT
     )
   `);
 
@@ -56,7 +57,7 @@ export function createDb(path: string) {
     getIteration: db.prepare("SELECT * FROM iterations WHERE id = ?"),
     getIterations: db.prepare("SELECT * FROM iterations ORDER BY id DESC LIMIT ? OFFSET ?"),
     insertEvent: db.prepare(
-      "INSERT INTO events (iteration_id, type, summary) VALUES (?, ?, ?)"
+      "INSERT INTO events (iteration_id, type, summary, content) VALUES (?, ?, ?, ?)"
     ),
     getEventsByIteration: db.prepare(
       "SELECT * FROM events WHERE iteration_id = ? ORDER BY timestamp ASC"
@@ -104,13 +105,13 @@ export function createDb(path: string) {
       return stmts.getIterations.all(limit, offset) as any[];
     },
 
-    insertEvent(iterationId: number, type: string, summary: string) {
-      stmts.insertEvent.run(iterationId, type, summary);
+    insertEvent(iterationId: number, type: string, summary: string, content?: string) {
+      stmts.insertEvent.run(iterationId, type, summary, content ?? null);
     },
 
     getEventsByIteration(iterationId: number) {
       return stmts.getEventsByIteration.all(iterationId) as {
-        id: number; iteration_id: number; timestamp: string; type: string; summary: string;
+        id: number; iteration_id: number; timestamp: string; type: string; summary: string; content: string | null;
       }[];
     },
 
