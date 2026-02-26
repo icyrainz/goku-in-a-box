@@ -5,7 +5,7 @@ import { fetchJson, postJson } from "../api/client";
 type AgentType = "opencode" | "goose";
 type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string; agentType?: AgentType };
 
-export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => void; onFilesClick?: () => void }) {
+export function Header({ onPromptClick, onFilesClick, onSnapshotClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void }) {
   const queryClient = useQueryClient();
   const [agentType, setAgentType] = useState<AgentType>("opencode");
 
@@ -64,6 +64,12 @@ export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => 
           <button onClick={onFilesClick} className="btn-ink">
             <span className="kanji-accent text-xs mr-1.5">巻</span>
             Files
+          </button>
+        )}
+        {onSnapshotClick && (
+          <button onClick={onSnapshotClick} className="btn-ink">
+            <span className="kanji-accent text-xs mr-1.5">蔵</span>
+            Snapshots
           </button>
         )}
         <select

@@ -6,17 +6,19 @@ import { Vitals } from "./components/Vitals";
 import { IterationTimeline } from "./components/IterationTimeline";
 import { PromptModal } from "./components/PromptModal";
 import { FileBrowser } from "./components/FileBrowser";
+import { SnapshotModal } from "./components/SnapshotModal";
 
 const queryClient = new QueryClient();
 
 export default function App() {
   const [promptOpen, setPromptOpen] = useState(false);
   const [filesOpen, setFilesOpen] = useState(false);
+  const [snapshotOpen, setSnapshotOpen] = useState(false);
 
   return (
     <QueryClientProvider client={queryClient}>
       <div className="h-screen flex flex-col bg-washi text-sumi">
-        <Header onPromptClick={() => setPromptOpen(true)} onFilesClick={() => setFilesOpen(true)} />
+        <Header onPromptClick={() => setPromptOpen(true)} onFilesClick={() => setFilesOpen(true)} onSnapshotClick={() => setSnapshotOpen(true)} />
         <main className="flex-1 grid grid-cols-[1fr_380px] gap-5 p-5 overflow-hidden">
           <div className="ink-panel rounded-lg p-5 overflow-hidden">
             <LiveStream />
@@ -32,6 +34,7 @@ export default function App() {
         </main>
         {promptOpen && <PromptModal onClose={() => setPromptOpen(false)} />}
         {filesOpen && <FileBrowser onClose={() => setFilesOpen(false)} />}
+        {snapshotOpen && <SnapshotModal onClose={() => setSnapshotOpen(false)} />}
       </div>
     </QueryClientProvider>
   );

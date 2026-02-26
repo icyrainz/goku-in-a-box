@@ -126,7 +126,7 @@ export class DockerClient {
     let offset = 0;
     let output = "";
     while (offset + 8 <= raw.length) {
-      const size = (raw[offset + 4] << 24) | (raw[offset + 5] << 16) | (raw[offset + 6] << 8) | raw[offset + 7];
+      const size = (raw[offset + 4]! << 24) | (raw[offset + 5]! << 16) | (raw[offset + 6]! << 8) | raw[offset + 7]!;
       offset += 8;
       if (offset + size <= raw.length) {
         output += decoder.decode(raw.slice(offset, offset + size));
@@ -134,6 +134,27 @@ export class DockerClient {
       offset += size;
     }
     return output;
+  }
+
+  async getArchive(containerId: string, path: string): Promise<ReadableStream<Uint8Array>> {
+    const res = await this.fetch(
+      `/containers/${containerId}/archive?path=${encodeURIComponent(path)}`
+    );
+    if (!res.ok) throw new Error(`getArchive failed: ${await res.text()}`);
+    if (!res.body) throw new Error("getArchive: no response body");
+    return res.body;
+  }
+
+  async putArchive(containerId: string, path: string, tar: ReadableStream<Uint8Array> | ArrayBuffer): Promise<void> {
+    const res = await this.fetch(
+      `/containers/${containerId}/archive?path=${encodeURIComponent(path)}`,
+      {
+        method: "PUT",
+        headers: { "Content-Type": "application/x-tar" },
+        body: tar,
+      }
+    );
+    if (!res.ok) throw new Error(`putArchive failed: ${await res.text()}`);
   }
 
   async streamLogs(id: string, onData: (line: string) => void, signal?: AbortSignal) {

@@ -46,10 +46,41 @@ export class SandboxManager {
     this.agentType = null;
   }
 
+  async snapshot(): Promise<ReadableStream<Uint8Array>> {
+    if (!this.containerId) throw new Error("No container running");
+    return this.docker.getArchive(this.containerId, "/workspace");
+  }
+
+  async restoreStart(
+    agentType: AgentType,
+    env: Record<string, string>,
+    tar: ReadableStream<Uint8Array> | ArrayBuffer
+  ): Promise<string> {
+    if (this.containerId) await this.stop();
+
+    const image = IMAGE_MAP[agentType];
+    const containerName = `goku-sandbox-${agentType}`;
+    const envArr = Object.entries(env).map(([k, v]) => `${k}=${v}`);
+
+    const { Id } = await this.docker.createContainer({
+      image,
+      name: containerName,
+      env: [`CONTROL_PLANE_URL=http://host.docker.internal:3000`, ...envArr],
+      extraHosts: ["host.docker.internal:host-gateway"],
+    });
+
+    // Inject workspace tar before starting so agent-loop finds restored files
+    await this.docker.putArchive(Id, "/", tar);
+    await this.docker.startContainer(Id);
+    this.containerId = Id;
+    this.agentType = agentType;
+    return Id;
+  }
+
   async status() {
     if (!this.containerId) return { status: "not_running" as const };
     try {
-      const info = await this.docker.inspectContainer(this.containerId);
+      const info = await this.docker.inspectContainer(this.containerId) as { State: { Running: boolean } };
       return {
         status: info.State.Running ? ("running" as const) : ("stopped" as const),
         containerId: this.containerId,
