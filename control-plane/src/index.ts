@@ -17,6 +17,7 @@ import { snapshotRoutes } from "./routes/snapshots";
 const db = createDb("data/sandbox.db");
 const docker = new DockerClient();
 const sandbox = new SandboxManager(docker);
+sandbox.reconnect().catch(() => {}); // re-attach to running container if any
 const broadcaster = new WsBroadcaster();
 const logs = new LogStore("data/logs");
 

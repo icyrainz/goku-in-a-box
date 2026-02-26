@@ -77,6 +77,20 @@ export class SandboxManager {
     return Id;
   }
 
+  async reconnect() {
+    // Detect a running goku-sandbox container (survives control-plane restart)
+    const containers = await this.docker.listContainers({ name: ["goku-sandbox-"] });
+    for (const c of containers) {
+      const name = (c.Names?.[0] ?? "").replace(/^\//, "");
+      const match = name.match(/^goku-sandbox-(opencode|goose)$/);
+      if (match && c.State === "running") {
+        this.containerId = c.Id;
+        this.agentType = match[1] as AgentType;
+        return;
+      }
+    }
+  }
+
   async status() {
     if (!this.containerId) return { status: "not_running" as const };
     try {
