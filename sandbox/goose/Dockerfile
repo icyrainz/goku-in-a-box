@@ -1,0 +1,19 @@
+FROM debian:bookworm-slim
+
+RUN apt-get update && apt-get install -y \
+    curl git jq wget python3 build-essential nodejs npm \
+    procps sysstat \
+    && rm -rf /var/lib/apt/lists/*
+
+RUN curl -fsSL https://github.com/block/goose/releases/download/stable/download_cli.sh | CONFIGURE=false bash
+ENV PATH="/root/.local/bin:${PATH}"
+
+RUN mkdir -p /state /workspace
+
+COPY BOOTSTRAP.md /state/BOOTSTRAP.md
+COPY goose/agent-loop.sh /usr/local/bin/agent-loop.sh
+RUN chmod +x /usr/local/bin/agent-loop.sh
+
+WORKDIR /workspace
+
+ENTRYPOINT ["/usr/local/bin/agent-loop.sh"]
