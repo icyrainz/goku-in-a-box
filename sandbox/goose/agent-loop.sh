@@ -15,19 +15,21 @@ collect_vitals() {
   echo "{\"cpu\": $cpu, \"memory\": $mem, \"disk\": $disk}"
 }
 
-# --- Helper: flush buffered text event ---
+# --- Helper: flush buffered event ---
 CURRENT_MSG_ID=""
+BUFFER_TYPE=""
 TEXT_BUFFER=""
 
 flush_text_buffer() {
   local iteration_id="$1"
   if [ -n "$TEXT_BUFFER" ] && [ -n "$CURRENT_MSG_ID" ]; then
+    local event_type="${BUFFER_TYPE:-text}"
     local summary
     summary=$(echo "$TEXT_BUFFER" | head -c 200)
     local payload
     payload=$(jq -n \
       --argjson iterationId "$iteration_id" \
-      --arg type "text" \
+      --arg type "$event_type" \
       --arg summary "$summary" \
       --arg content "$TEXT_BUFFER" \
       '{iterationId: $iterationId, events: [{type: $type, summary: $summary, content: $content}]}')
@@ -36,6 +38,7 @@ flush_text_buffer() {
       -d "$payload" > /dev/null 2>&1 || true
   fi
   TEXT_BUFFER=""
+  BUFFER_TYPE=""
   CURRENT_MSG_ID=""
 }
 
@@ -115,12 +118,24 @@ while true; do
           case "$CONTENT_TYPE" in
             text)
               TEXT=$(echo "$line" | jq -r ".message.content[$ci].text // \"\"" 2>/dev/null)
-              if [ "$MSG_ID" = "$CURRENT_MSG_ID" ]; then
+              if [ "$MSG_ID" = "$CURRENT_MSG_ID" ] && [ "$BUFFER_TYPE" = "text" ]; then
                 TEXT_BUFFER+="$TEXT"
               else
                 flush_text_buffer "$ITERATION"
                 CURRENT_MSG_ID="$MSG_ID"
+                BUFFER_TYPE="text"
                 TEXT_BUFFER="$TEXT"
+              fi
+              ;;
+            thinking|reasoning)
+              THOUGHT=$(echo "$line" | jq -r ".message.content[$ci].thinking // .message.content[$ci].text // \"\"" 2>/dev/null)
+              if [ "$MSG_ID" = "$CURRENT_MSG_ID" ] && [ "$BUFFER_TYPE" = "thought" ]; then
+                TEXT_BUFFER+="$THOUGHT"
+              else
+                flush_text_buffer "$ITERATION"
+                CURRENT_MSG_ID="$MSG_ID"
+                BUFFER_TYPE="thought"
+                TEXT_BUFFER="$THOUGHT"
               fi
               ;;
             toolRequest)
@@ -136,11 +151,6 @@ while true; do
               RESULT=$(echo "$line" | jq -r ".message.content[$ci].toolResult // .message.content[$ci] | tostring" 2>/dev/null | head -c 10000)
               RESULT_SUMMARY=$(echo "$RESULT" | head -c 200)
               send_event "$ITERATION" "tool_result" "$RESULT_SUMMARY" "$RESULT"
-              ;;
-            thinking|reasoning)
-              flush_text_buffer "$ITERATION"
-              THOUGHT=$(echo "$line" | jq -r ".message.content[$ci].thinking // .message.content[$ci].text // \"\"" 2>/dev/null)
-              send_event "$ITERATION" "thought" "$(echo "$THOUGHT" | head -c 200)" "$THOUGHT"
               ;;
             *)
               ;;
