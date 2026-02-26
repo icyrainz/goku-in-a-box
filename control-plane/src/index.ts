@@ -23,12 +23,12 @@ const logs = new LogStore("data/logs");
 const cpLlm = process.env.CP_LLM_BASE_URL
   ? createLlm({
       baseUrl: process.env.CP_LLM_BASE_URL,
-      apiKey: process.env.CP_LLM_API_KEY ?? "",
-      model: process.env.CP_LLM_MODEL ?? "default",
+      apiKey: process.env.CP_LLM_API_KEY ?? process.env.LLM_API_KEY ?? "",
+      model: process.env.CP_LLM_MODEL ?? "Qwen3.5-27B",
     })
-  : process.env.LLM_BASE_URL
+  : process.env.LLM_HOST
     ? createLlm({
-        baseUrl: process.env.LLM_BASE_URL,
+        baseUrl: `${process.env.LLM_HOST}/v1`,
         apiKey: process.env.LLM_API_KEY ?? "",
         model: process.env.CP_LLM_MODEL ?? "Qwen3.5-27B",
       })
