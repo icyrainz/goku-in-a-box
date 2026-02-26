@@ -28,7 +28,7 @@ export function filesRoutes(sandbox: SandboxManager, docker: DockerClient) {
         .map((line) => {
           const [typeChar, size, mtime, name] = line.split("\t");
           return {
-            name,
+            name: name ?? "",
             type: typeChar === "d" ? "directory" : "file",
             size: Number(size),
             modified: new Date(Number(mtime) * 1000).toISOString(),

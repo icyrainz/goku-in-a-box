@@ -11,6 +11,9 @@ export default defineConfig({
       "/ws": {
         target: "http://localhost:3000",
         ws: true,
+        configure: (proxy) => {
+          proxy.on("error", () => {});
+        },
       },
     },
   },

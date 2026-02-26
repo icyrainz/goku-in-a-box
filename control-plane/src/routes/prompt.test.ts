@@ -14,7 +14,7 @@ describe("prompt routes", () => {
 
   it("GET returns empty when no prompt set", async () => {
     const res = await app.request("/api/prompt");
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(body.content).toBe("");
   });
@@ -28,7 +28,7 @@ describe("prompt routes", () => {
     expect(putRes.status).toBe(200);
 
     const getRes = await app.request("/api/prompt");
-    const body = await getRes.json();
+    const body = (await getRes.json()) as any;
     expect(body.content).toBe("Build a web scraper");
   });
 
@@ -44,7 +44,7 @@ describe("prompt routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ content: "v2" }),
     });
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.previous).toBe("v1");
     expect(body.current).toBe("v2");
   });

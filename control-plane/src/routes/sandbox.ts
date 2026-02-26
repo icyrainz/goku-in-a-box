@@ -1,7 +1,8 @@
 import { Hono } from "hono";
 import type { SandboxManager, AgentType } from "../sandbox";
+import type { createDb } from "../db";
 
-export function sandboxRoutes(manager: SandboxManager) {
+export function sandboxRoutes(manager: SandboxManager, db: ReturnType<typeof createDb>) {
   const app = new Hono();
 
   app.post("/start", async (c) => {
@@ -16,7 +17,7 @@ export function sandboxRoutes(manager: SandboxManager) {
         ["LLM_BASE_URL", "OPENCODE_LLM_HOST"],
         ["OPENCODE_MODEL", "OPENCODE_MODEL"],
         ["ITERATION_SLEEP", "ITERATION_SLEEP"],
-      ]) {
+      ] as const) {
         const val = process.env[procKey];
         if (val) env[envKey] = val;
       }
@@ -45,6 +46,7 @@ export function sandboxRoutes(manager: SandboxManager) {
 
   app.post("/stop", async (c) => {
     await manager.stop();
+    db.closeOpenIterations();
     return c.json({ status: "stopped" });
   });
 

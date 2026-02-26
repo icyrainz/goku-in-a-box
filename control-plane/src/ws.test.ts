@@ -30,7 +30,7 @@ describe("WsBroadcaster", () => {
     broadcaster.broadcast({ type: "test", data: { foo: "bar" } });
 
     expect(messages).toHaveLength(2);
-    const parsed = JSON.parse(messages[0]);
+    const parsed = JSON.parse(messages[0]!);
     expect(parsed.type).toBe("test");
     expect(parsed.data.foo).toBe("bar");
     expect(parsed.timestamp).toBeDefined();

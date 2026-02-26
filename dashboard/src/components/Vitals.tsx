@@ -137,7 +137,7 @@ export function Vitals() {
                 axisLine={false}
               />
               <Tooltip
-                labelFormatter={(idx: number) => points[idx]?.time ?? ""}
+                labelFormatter={(_label: unknown, payload: readonly { payload?: { time?: string } }[]) => payload[0]?.payload?.time ?? ""}
                 contentStyle={{
                   backgroundColor: "#1C1916",
                   border: "1px solid #38342F",

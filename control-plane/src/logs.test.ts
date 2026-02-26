@@ -22,7 +22,7 @@ describe("LogStore", () => {
     store.append(1, { type: "tool_call", data: "ls" });
     const events = store.read(1);
     expect(events).toHaveLength(2);
-    expect(events[0].type).toBe("thought");
+    expect(events[0]!.type).toBe("thought");
   });
 
   it("returns empty array for nonexistent iteration", () => {

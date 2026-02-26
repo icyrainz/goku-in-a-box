@@ -18,14 +18,14 @@ describe("sandbox routes", () => {
       ),
     } as any);
 
+    const db = { closeOpenIterations: mock(() => {}) } as any;
     app = new Hono();
-    app.route("/api/sandbox", sandboxRoutes(manager));
+    app.route("/api/sandbox", sandboxRoutes(manager, db));
   });
 
   it("GET /status returns not_running when no container", async () => {
     manager.containerId = null;
-    const res = await app.request("/api/sandbox/status");
-    const body = await res.json();
+    const body = (await (await app.request("/api/sandbox/status")).json()) as any;
     expect(body.status).toBe("not_running");
   });
 
@@ -35,7 +35,7 @@ describe("sandbox routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({}),
     });
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(body.containerId).toBe("abc123");
     expect(body.agentType).toBe("opencode");
@@ -47,7 +47,7 @@ describe("sandbox routes", () => {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ agentType: "goose" }),
     });
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(body.agentType).toBe("goose");
   });
@@ -55,7 +55,7 @@ describe("sandbox routes", () => {
   it("GET /status includes agentType when running", async () => {
     await manager.start("opencode", {});
     const res = await app.request("/api/sandbox/status");
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.status).toBe("running");
     expect(body.agentType).toBe("opencode");
   });

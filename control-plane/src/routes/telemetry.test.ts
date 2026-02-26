@@ -35,7 +35,7 @@ describe("telemetry routes", () => {
     });
 
     expect(res.status).toBe(200);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.received).toBe(2);
 
     const events = db.getEventsByIteration(iterId);
@@ -64,14 +64,14 @@ describe("telemetry routes", () => {
     expect(iter?.action_count).toBe(5);
 
     const vitals = db.getVitals(1);
-    expect(vitals[0].cpu_pct).toBe(12.5);
+    expect(vitals[0]!.cpu_pct).toBe(12.5);
   });
 
   it("GET /iterations returns paginated list", async () => {
     for (let i = 0; i < 5; i++) db.startIteration();
 
     const res = await app.request("/api/telemetry/iterations?limit=2&offset=0");
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.iterations).toHaveLength(2);
   });
 
@@ -80,7 +80,7 @@ describe("telemetry routes", () => {
     db.insertEvent(iterId, "thought", "test");
 
     const res = await app.request(`/api/telemetry/iteration/${iterId}`);
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.iteration.id).toBe(iterId);
     expect(body.events).toHaveLength(1);
   });
@@ -90,7 +90,7 @@ describe("telemetry routes", () => {
     db.insertVitals(20, 200, 600);
 
     const res = await app.request("/api/telemetry/vitals?limit=10");
-    const body = await res.json();
+    const body = (await res.json()) as any;
     expect(body.vitals).toHaveLength(2);
   });
 });

@@ -44,14 +44,14 @@ describe("db", () => {
     db.insertEvent(iterId, "tool_call", "Running ls");
     const events = db.getEventsByIteration(iterId);
     expect(events).toHaveLength(2);
-    expect(events[0].type).toBe("thought");
+    expect(events[0]!.type).toBe("thought");
   });
 
   it("inserts and retrieves vitals", () => {
     db.insertVitals(45.2, 512, 2048);
     const vitals = db.getVitals(10);
     expect(vitals).toHaveLength(1);
-    expect(vitals[0].cpu_pct).toBe(45.2);
+    expect(vitals[0]!.cpu_pct).toBe(45.2);
   });
 
   it("lists iterations with pagination", () => {

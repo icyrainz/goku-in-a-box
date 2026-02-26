@@ -21,6 +21,8 @@ export function telemetryRoutes(
     // Auto-create iteration row with the agent's ID if we haven't seen it
     if (!knownIterations.has(body.iterationId)) {
       if (!db.getIteration(body.iterationId)) {
+        // Close any stale iterations left open by a killed container
+        db.closeOpenIterations();
         db.startIteration(body.iterationId);
       }
       knownIterations.add(body.iterationId);
