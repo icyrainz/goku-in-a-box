@@ -72,25 +72,33 @@ while true; do
   PROMPT_RESPONSE=$(curl -sf "$CONTROL_PLANE_URL/api/prompt" || echo '{"content":""}')
   CURRENT_PROMPT=$(echo "$PROMPT_RESPONSE" | jq -r '.content // ""')
 
-  # 2. Read bootstrap identity and memory
+  # 2. Read bootstrap identity, memory, tasks, and operating instructions
   BOOTSTRAP=$(cat /state/BOOTSTRAP.md 2>/dev/null || echo "No bootstrap state found.")
   MEMORY=$(cat /workspace/.memory.md 2>/dev/null || echo "No previous memory. This is a fresh start.")
+  TASKS=$(cat /workspace/.tasks.md 2>/dev/null || echo "")
+  OPERATING=$(cat /state/OPERATING.md 2>/dev/null || echo "")
 
   # 3. Compose instruction
   INSTRUCTION="## Identity\n$BOOTSTRAP\n\n"
   INSTRUCTION+="## Memory (from previous iteration)\n$MEMORY\n\n"
 
-  if [ -z "$CURRENT_PROMPT" ]; then
-    INSTRUCTION+="## Mode: Self-Bootstrap\nNo prompt has been assigned. Prepare to receive tasks."
+  if [ -n "$TASKS" ]; then
+    INSTRUCTION+="## Tasks\n$TASKS\n\n"
   else
-    INSTRUCTION+="## Current Prompt\n$CURRENT_PROMPT"
+    INSTRUCTION+="## Tasks\nNo tasks file exists. Create /workspace/.tasks.md as your first action.\n\n"
+  fi
+
+  if [ -z "$CURRENT_PROMPT" ]; then
+    INSTRUCTION+="## Mode: Self-Bootstrap\nNo objective assigned. Explore your environment and prepare to receive tasks."
+  else
+    INSTRUCTION+="## Objective\n$CURRENT_PROMPT"
 
     if [ "$CURRENT_PROMPT" != "$PREV_PROMPT" ] && [ -n "$PREV_PROMPT" ]; then
-      INSTRUCTION+="\n\n## Notice: Prompt Changed\nThe human has updated the prompt.\nPrevious: $PREV_PROMPT\nCurrent: $CURRENT_PROMPT"
+      INSTRUCTION+="\n\n## Notice: Objective Changed\nThe human has updated the objective.\nPrevious: $PREV_PROMPT\nCurrent: $CURRENT_PROMPT\nRevise your tasks to reflect the new objective."
     fi
   fi
 
-  INSTRUCTION+="\n\n## Rules\n- This is iteration $ITERATION. Your environment: workdir=/workspace, control-plane=$CONTROL_PLANE_URL.\n- Your memory above tells you what you did last. Pick up EXACTLY where you left off.\n- Do NOT re-explore files you already know about from memory.\n- IMPORTANT: Do as much work as possible in this iteration. Write multiple files, run multiple commands. Do NOT stop after just one or two actions — keep going until you've made significant progress on the current task step.\n- As your FINAL action, write /workspace/.memory.md with:\n  1. What you accomplished this iteration\n  2. Current status of the task\n  3. Concrete next steps for the next iteration\n  This file is your only memory across iterations. Keep it concise."
+  INSTRUCTION+="\n\n## Operating Instructions\n- This is iteration $ITERATION. workdir=/workspace, control-plane=$CONTROL_PLANE_URL.\n$OPERATING"
 
   # 4. Register iteration with control plane
   curl -sf -X POST "$CONTROL_PLANE_URL/api/telemetry/stream" \
