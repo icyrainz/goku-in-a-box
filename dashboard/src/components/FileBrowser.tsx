@@ -65,7 +65,7 @@ export function FileBrowser({ onClose }: { onClose: () => void }) {
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
       <div
-        className="bg-gray-900 border border-gray-700 rounded-lg w-[900px] max-h-[80vh] flex flex-col shadow-2xl"
+        className="bg-gray-900 border border-gray-700 rounded-lg w-[900px] h-[70vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">

@@ -16,6 +16,36 @@ const EVENT_COLORS: Record<string, string> = {
 
 const HIDDEN_EVENTS = new Set(["step_start", "step_finish", "connected"]);
 
+function FormatContent({ content, type }: { content: string; type: string }) {
+  // Try to parse as JSON for structured display
+  let parsed: any = null;
+  try {
+    parsed = JSON.parse(content);
+  } catch {}
+
+  if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) {
+    return (
+      <div className="mt-1 ml-6 p-2 bg-gray-800/60 rounded text-[11px] border border-gray-700/50 space-y-1 max-h-64 overflow-auto">
+        {Object.entries(parsed).map(([key, value]) => (
+          <div key={key} className="flex gap-2">
+            <span className="text-gray-500 shrink-0">{key}:</span>
+            <span className="text-gray-300 whitespace-pre-wrap break-words">
+              {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
+            </span>
+          </div>
+        ))}
+      </div>
+    );
+  }
+
+  // Plain text — show as-is
+  return (
+    <pre className="mt-1 ml-6 p-2 bg-gray-800/60 rounded text-[11px] text-gray-300 whitespace-pre-wrap break-words max-h-64 overflow-auto border border-gray-700/50">
+      {content}
+    </pre>
+  );
+}
+
 function EventRow({ event }: { event: any }) {
   const [expanded, setExpanded] = useState(false);
   const data = typeof event.data === "object" ? event.data : {};
@@ -43,9 +73,7 @@ function EventRow({ event }: { event: any }) {
         <span className="text-gray-300 truncate">{summary}</span>
       </div>
       {expanded && content && (
-        <pre className="mt-1 ml-6 p-2 bg-gray-800/60 rounded text-[11px] text-gray-300 whitespace-pre-wrap break-words max-h-64 overflow-auto border border-gray-700/50">
-          {content}
-        </pre>
+        <FormatContent content={content} type={event.type} />
       )}
     </div>
   );
