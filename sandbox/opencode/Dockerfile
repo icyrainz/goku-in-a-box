@@ -11,6 +11,7 @@ ENV PATH="/root/.opencode/bin:${PATH}"
 RUN mkdir -p /state /workspace
 
 COPY BOOTSTRAP.md /state/BOOTSTRAP.md
+COPY OPERATING.md /state/OPERATING.md
 COPY opencode/opencode.json /workspace/opencode.json
 COPY opencode/agent-loop.sh /usr/local/bin/agent-loop.sh
 RUN chmod +x /usr/local/bin/agent-loop.sh

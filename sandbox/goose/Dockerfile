@@ -11,6 +11,7 @@ ENV PATH="/root/.local/bin:${PATH}"
 RUN mkdir -p /state /workspace
 
 COPY BOOTSTRAP.md /state/BOOTSTRAP.md
+COPY OPERATING.md /state/OPERATING.md
 COPY goose/agent-loop.sh /usr/local/bin/agent-loop.sh
 RUN chmod +x /usr/local/bin/agent-loop.sh
 
