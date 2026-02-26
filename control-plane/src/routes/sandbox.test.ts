@@ -18,7 +18,7 @@ describe("sandbox routes", () => {
       ),
     } as any);
 
-    const db = { closeOpenIterations: mock(() => {}) } as any;
+    const db = { closeOpenIterations: mock(() => {}), clearPrompt: mock(() => {}) } as any;
     app = new Hono();
     app.route("/api/sandbox", sandboxRoutes(manager, db));
   });

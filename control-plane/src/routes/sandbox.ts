@@ -40,6 +40,7 @@ export function sandboxRoutes(manager: SandboxManager, db: ReturnType<typeof cre
       if (sleep) env["ITERATION_SLEEP"] = sleep;
     }
 
+    db.clearPrompt();
     const containerId = await manager.start(agentType, env);
     return c.json({ containerId, agentType, status: "started" });
   });

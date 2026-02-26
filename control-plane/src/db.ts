@@ -78,6 +78,7 @@ export function createDb(path: string) {
     ),
     insertVitals: db.prepare("INSERT INTO vitals (cpu_pct, memory_mb, disk_mb) VALUES (?, ?, ?)"),
     getVitals: db.prepare("SELECT * FROM vitals ORDER BY timestamp DESC LIMIT ?"),
+    clearPrompt: db.prepare("DELETE FROM prompt_history"),
     closeOpenIterations: db.prepare(
       "UPDATE iterations SET end_time = datetime('now'), summary = 'Interrupted' WHERE end_time IS NULL"
     ),
@@ -151,6 +152,10 @@ export function createDb(path: string) {
       return stmts.getVitals.all(limit) as {
         id: number; timestamp: string; cpu_pct: number; memory_mb: number; disk_mb: number;
       }[];
+    },
+
+    clearPrompt() {
+      stmts.clearPrompt.run();
     },
 
     closeOpenIterations() {
