@@ -140,15 +140,19 @@ while true; do
               ;;
             toolRequest)
               flush_text_buffer "$ITERATION"
-              TOOL_NAME=$(echo "$line" | jq -r ".message.content[$ci].toolCall.name // \"tool\"" 2>/dev/null)
-              TOOL_ARGS=$(echo "$line" | jq -r ".message.content[$ci].toolCall.arguments | if type == \"object\" then (to_entries | map(.key + \"=\" + (.value | tostring | .[0:80])) | join(\", \")) else \"\" end" 2>/dev/null | head -c 200)
+              # Goose wraps in {"status":"success","value":{"name":"...","arguments":{...}}}
+              TC=".message.content[$ci].toolCall"
+              TOOL_NAME=$(echo "$line" | jq -r "$TC.value.name // $TC.name // \"tool\"" 2>/dev/null)
+              TOOL_ARGS=$(echo "$line" | jq -r "($TC.value.arguments // $TC.arguments) | if type == \"object\" then (to_entries | map(.key + \"=\" + (.value | tostring | .[0:80])) | join(\", \")) else \"\" end" 2>/dev/null | head -c 200)
               send_event "$ITERATION" "tool_use" "$TOOL_NAME${TOOL_ARGS:+: $TOOL_ARGS}" \
-                "$(echo "$line" | jq -r ".message.content[$ci].toolCall | tostring" 2>/dev/null | head -c 5000)"
+                "$(echo "$line" | jq -r "$TC.value // $TC | tostring" 2>/dev/null | head -c 5000)"
               ACTION_COUNT=$((ACTION_COUNT + 1))
               ;;
             toolResponse)
               flush_text_buffer "$ITERATION"
-              RESULT=$(echo "$line" | jq -r ".message.content[$ci].toolResult // .message.content[$ci] | tostring" 2>/dev/null | head -c 10000)
+              # Goose wraps in {"status":"success","value":{"content":[{"type":"text","text":"..."}],"isError":false}}
+              TR=".message.content[$ci].toolResult"
+              RESULT=$(echo "$line" | jq -r "($TR.value.content // $TR.content // [$TR]) | map(.text // (. | tostring)) | join(\"\n\")" 2>/dev/null | head -c 10000)
               RESULT_SUMMARY=$(echo "$RESULT" | head -c 200)
               send_event "$ITERATION" "tool_result" "$RESULT_SUMMARY" "$RESULT"
               ;;
