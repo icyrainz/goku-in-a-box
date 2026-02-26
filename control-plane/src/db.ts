@@ -62,6 +62,9 @@ export function createDb(path: string) {
     getEventsByIteration: db.prepare(
       "SELECT * FROM events WHERE iteration_id = ? ORDER BY timestamp ASC"
     ),
+    updateIterationCounts: db.prepare(
+      "UPDATE iterations SET action_count = ?, error_count = ? WHERE id = ?"
+    ),
     insertVitals: db.prepare("INSERT INTO vitals (cpu_pct, memory_mb, disk_mb) VALUES (?, ?, ?)"),
     getVitals: db.prepare("SELECT * FROM vitals ORDER BY timestamp DESC LIMIT ?"),
   };
@@ -92,6 +95,10 @@ export function createDb(path: string) {
 
     endIteration(id: number, summary: string, actionCount: number, errorCount: number) {
       stmts.endIteration.run(summary, actionCount, errorCount, id);
+    },
+
+    updateIterationCounts(id: number, actionCount: number, errorCount: number) {
+      stmts.updateIterationCounts.run(actionCount, errorCount, id);
     },
 
     getIteration(id: number) {

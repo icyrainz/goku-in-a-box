@@ -135,7 +135,7 @@ while true; do
       -H "Content-Type: application/json" \
       -d "$PAYLOAD" \
       > /dev/null 2>&1 || true
-  done < <(opencode "${OPENCODE_ARGS[@]}" 2>/dev/null || true)
+  done < <(stdbuf -oL opencode "${OPENCODE_ARGS[@]}" 2>/dev/null || true)
 
   # 6. Report end-of-iteration summary + vitals
   VITALS=$(collect_vitals)

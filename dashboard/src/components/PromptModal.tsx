@@ -76,8 +76,9 @@ export function PromptModal({ onClose }: { onClose: () => void }) {
 
         <div className="flex-1 overflow-auto p-5 min-h-[300px]">
           {editing ? (
-            <div className="h-full rounded overflow-hidden border border-washi-border">
+            <div className="rounded overflow-hidden border border-washi-border" style={{ height: "min(60vh, 500px)" }}>
               <Editor
+                height="100%"
                 defaultLanguage="markdown"
                 theme="vs-dark"
                 value={currentContent}

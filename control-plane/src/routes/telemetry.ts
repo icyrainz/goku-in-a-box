@@ -39,11 +39,11 @@ export function telemetryRoutes(
       });
     }
 
-    // Update action count in real-time so the dashboard shows progress
+    // Update action count in real-time so the dashboard shows progress (without setting end_time)
     if (actionCount > 0) {
       const iter = db.getIteration(dbIterationId);
       if (iter) {
-        db.endIteration(dbIterationId, iter.summary ?? "In progress...", iter.action_count + actionCount, iter.error_count);
+        db.updateIterationCounts(dbIterationId, iter.action_count + actionCount, iter.error_count);
       }
     }
 
