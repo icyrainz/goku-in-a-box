@@ -3,7 +3,7 @@ import { fetchJson, postJson } from "../api/client";
 
 type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string };
 
-export function Header() {
+export function Header({ onPromptClick }: { onPromptClick?: () => void }) {
   const queryClient = useQueryClient();
 
   const { data: status } = useQuery({
@@ -38,6 +38,14 @@ export function Header() {
         </div>
       </div>
       <div className="flex gap-2">
+        {onPromptClick && (
+          <button
+            onClick={onPromptClick}
+            className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium transition-colors"
+          >
+            Prompt
+          </button>
+        )}
         <button
           onClick={() => startMutation.mutate()}
           disabled={isRunning || startMutation.isPending}
