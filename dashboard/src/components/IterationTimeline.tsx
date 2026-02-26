@@ -194,10 +194,10 @@ export function IterationTimeline() {
               </span>
               <button
                 onClick={close}
-                className="text-sumi-faint hover:text-sumi-light hover:bg-washi-dark transition-colors text-xs leading-none px-2 py-1 rounded"
+                className="text-sumi-faint hover:text-sumi hover:bg-washi-dark transition-colors text-sm leading-none p-1.5 -m-1.5 rounded"
                 title="Close"
               >
-                Close
+                &times;
               </button>
             </div>
           </div>
