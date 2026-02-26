@@ -59,6 +59,8 @@ send_event() {
 
 # --- Main loop ---
 PREV_PROMPT=""
+BACKOFF=0
+MAX_BACKOFF=60
 
 LATEST_ID=$(curl -sf "$CONTROL_PLANE_URL/api/telemetry/iterations?limit=1" | jq -r '.iterations[0].id // 0' 2>/dev/null || echo "0")
 ITERATION=${LATEST_ID:-0}
@@ -203,6 +205,14 @@ while true; do
 
   PREV_PROMPT="$CURRENT_PROMPT"
 
-  # 7. Sleep before next iteration
-  sleep "$ITERATION_SLEEP"
+  # 7. Sleep before next iteration (backoff if LLM unavailable)
+  if [ "$ACTION_COUNT" -eq 0 ]; then
+    BACKOFF=$(( BACKOFF == 0 ? 2 : BACKOFF * 2 ))
+    BACKOFF=$(( BACKOFF > MAX_BACKOFF ? MAX_BACKOFF : BACKOFF ))
+    log "No actions produced — backing off ${BACKOFF}s"
+    sleep "$BACKOFF"
+  else
+    BACKOFF=0
+    sleep "$ITERATION_SLEEP"
+  fi
 done
