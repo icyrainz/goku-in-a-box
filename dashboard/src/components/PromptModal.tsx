@@ -36,44 +36,47 @@ export function PromptModal({ onClose }: { onClose: () => void }) {
   }, [onClose]);
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onClick={onClose}>
       <div
-        className="bg-gray-900 border border-gray-700 rounded-lg w-[700px] max-h-[80vh] flex flex-col shadow-2xl"
+        className="bg-washi-panel border border-washi-border rounded-lg w-[700px] max-h-[80vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-washi-border">
           <div className="flex items-center gap-3">
-            <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider">Agent Prompt</h2>
+            <span className="kanji-accent text-base">筆</span>
+            <h2 className="section-heading">Agent Prompt</h2>
             {prompt?.updated_at && (
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-sumi-faint ml-1">
                 Updated {new Date(prompt.updated_at).toLocaleString()}
               </span>
             )}
           </div>
           <div className="flex items-center gap-2">
-            {editing && isDirty && <span className="text-xs text-amber-400">Unsaved</span>}
+            {editing && isDirty && <span className="text-xs text-kitsune font-medium">Unsaved</span>}
             {editing && (
               <button
                 onClick={() => { if (localContent) saveMutation.mutate(localContent); }}
                 disabled={!isDirty || saveMutation.isPending}
-                className="px-3 py-1 bg-blue-600 hover:bg-blue-500 disabled:opacity-50 rounded text-xs font-medium transition-colors"
+                className="btn-ink btn-ai text-xs"
               >
                 {saveMutation.isPending ? "Saving..." : "Save"}
               </button>
             )}
             <button
               onClick={() => { setEditing(!editing); setLocalContent(null); }}
-              className="px-3 py-1 bg-gray-700 hover:bg-gray-600 rounded text-xs font-medium transition-colors"
+              className="btn-ink text-xs"
             >
               {editing ? "Cancel" : "Edit"}
             </button>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">&times;</button>
+            <button onClick={onClose} className="text-sumi-faint hover:text-sumi text-lg leading-none ml-1 transition-colors">
+              &times;
+            </button>
           </div>
         </div>
 
-        <div className="flex-1 overflow-auto p-4 min-h-[300px]">
+        <div className="flex-1 overflow-auto p-5 min-h-[300px]">
           {editing ? (
-            <div className="h-full rounded overflow-hidden border border-gray-700">
+            <div className="h-full rounded overflow-hidden border border-washi-border">
               <Editor
                 defaultLanguage="markdown"
                 theme="vs-dark"
@@ -85,12 +88,13 @@ export function PromptModal({ onClose }: { onClose: () => void }) {
                   lineNumbers: "off",
                   wordWrap: "on",
                   padding: { top: 12 },
+                  fontFamily: "'JetBrains Mono', monospace",
                 }}
               />
             </div>
           ) : (
-            <pre className="text-sm text-gray-300 whitespace-pre-wrap font-mono">
-              {prompt?.content || <span className="text-gray-600 italic">No prompt set</span>}
+            <pre className="text-sm text-sumi whitespace-pre-wrap font-mono leading-relaxed">
+              {prompt?.content || <span className="text-sumi-faint italic font-sans">No prompt set</span>}
             </pre>
           )}
         </div>

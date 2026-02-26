@@ -15,17 +15,17 @@ export default function App() {
 
   return (
     <QueryClientProvider client={queryClient}>
-      <div className="h-screen flex flex-col bg-gray-950 text-gray-100">
+      <div className="h-screen flex flex-col bg-washi text-sumi">
         <Header onPromptClick={() => setPromptOpen(true)} onFilesClick={() => setFilesOpen(true)} />
-        <main className="flex-1 grid grid-cols-[1fr_350px] gap-4 p-4 overflow-hidden">
-          <div className="bg-gray-900 rounded-lg border border-gray-800 p-4 overflow-auto">
+        <main className="flex-1 grid grid-cols-[1fr_380px] gap-5 p-5 overflow-hidden">
+          <div className="ink-panel rounded-lg p-5 overflow-auto">
             <LiveStream />
           </div>
-          <div className="flex flex-col gap-4 overflow-hidden">
-            <div className="flex-1 bg-gray-900 rounded-lg border border-gray-800 p-4 overflow-auto">
+          <div className="flex flex-col gap-5 overflow-hidden">
+            <div className="flex-1 ink-panel rounded-lg p-5 overflow-auto">
               <Vitals />
             </div>
-            <div className="flex-1 bg-gray-900 rounded-lg border border-gray-800 p-4 overflow-auto">
+            <div className="flex-[1.2] ink-panel rounded-lg p-5 overflow-auto">
               <IterationTimeline />
             </div>
           </div>

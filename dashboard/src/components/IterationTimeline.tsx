@@ -35,42 +35,58 @@ export function IterationTimeline() {
 
   return (
     <div className="flex flex-col h-full">
-      <h2 className="text-sm font-semibold text-gray-400 uppercase tracking-wider mb-2">Iterations</h2>
+      <div className="flex items-baseline gap-2 mb-3">
+        <span className="kanji-accent text-base">道</span>
+        <h2 className="section-heading">Iterations</h2>
+      </div>
+
       <div className="flex-1 overflow-auto space-y-1">
         {iterations.length === 0 && (
-          <p className="text-gray-600 italic text-xs">No iterations yet</p>
+          <p className="text-sumi-faint italic text-sm">No iterations yet</p>
         )}
-        {iterations.map((iter) => (
-          <button
-            key={iter.id}
-            onClick={() => setSelectedId(iter.id === selectedId ? null : iter.id)}
-            className={`w-full text-left p-2 rounded text-xs transition-colors ${
-              iter.id === selectedId ? "bg-gray-700" : "hover:bg-gray-800"
-            }`}
-          >
-            <div className="flex justify-between">
-              <span className="font-mono text-gray-400">#{iter.id}</span>
-              <span className="text-gray-500">
-                {iter.action_count} actions
-                {iter.error_count > 0 && (
-                  <span className="text-red-400 ml-1">({iter.error_count} errors)</span>
+        {iterations.map((iter) => {
+          const selected = iter.id === selectedId;
+          return (
+            <button
+              key={iter.id}
+              onClick={() => setSelectedId(selected ? null : iter.id)}
+              className={`w-full text-left p-2.5 rounded text-sm transition-all flex items-start gap-2.5 ${
+                selected
+                  ? "bg-ai-wash border border-ai/20"
+                  : "hover:bg-washi-dark border border-transparent"
+              }`}
+            >
+              <span className={`w-2 h-2 rounded-full mt-1 shrink-0 transition-colors ${
+                selected ? "bg-ai" : "bg-washi-border"
+              }`} />
+              <div className="flex-1 min-w-0">
+                <div className="flex justify-between items-center">
+                  <span className="font-mono text-sumi-light font-medium">#{iter.id}</span>
+                  <span className="text-sumi-faint">
+                    {iter.action_count} actions
+                    {iter.error_count > 0 && (
+                      <span className="text-shu ml-1 font-medium">({iter.error_count} err)</span>
+                    )}
+                  </span>
+                </div>
+                {iter.summary && (
+                  <p className="text-sumi truncate mt-0.5">{iter.summary}</p>
                 )}
-              </span>
-            </div>
-            {iter.summary && (
-              <p className="text-gray-300 truncate mt-0.5">{iter.summary}</p>
-            )}
-          </button>
-        ))}
+              </div>
+            </button>
+          );
+        })}
       </div>
 
       {detail && (
-        <div className="mt-2 pt-2 border-t border-gray-700 max-h-40 overflow-auto text-xs space-y-1">
+        <div className="mt-3 pt-3 border-t border-washi-border max-h-40 overflow-auto text-sm space-y-1">
           {detail.events.map((e) => (
             <div key={e.id} className="flex gap-2">
-              <span className="text-gray-600 shrink-0">{new Date(e.timestamp).toLocaleTimeString()}</span>
-              <span className="text-yellow-400 shrink-0">[{e.type}]</span>
-              <span className="text-gray-300 truncate">{e.summary}</span>
+              <span className="text-sumi-faint shrink-0 font-mono">
+                {new Date(e.timestamp).toLocaleTimeString()}
+              </span>
+              <span className="text-kin shrink-0 font-medium">[{e.type}]</span>
+              <span className="text-sumi truncate">{e.summary}</span>
             </div>
           ))}
         </div>

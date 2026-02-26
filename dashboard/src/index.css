@@ -1,1 +1,212 @@
 @import "tailwindcss";
+
+@theme {
+  /* Typography */
+  --font-serif: "Shippori Mincho B1", serif;
+  --font-sans: "Source Sans 3", sans-serif;
+  --font-mono: "JetBrains Mono", monospace;
+
+  /* 墨 Sumi - Text tones (warm light on dark) */
+  --color-sumi: #D8D0C4;
+  --color-sumi-deep: #EDE5D8;
+  --color-sumi-light: #8A827A;
+  --color-sumi-faint: #5C5650;
+
+  /* 藍 Ai - Indigo (brighter for dark bg) */
+  --color-ai: #5A9BD5;
+  --color-ai-deep: #4A8CC7;
+  --color-ai-wash: rgba(90, 155, 213, 0.12);
+  --color-ai-light: #7BB3E0;
+
+  /* 朱 Shu - Vermillion */
+  --color-shu: #D4605E;
+  --color-shu-wash: rgba(212, 96, 94, 0.1);
+
+  /* 金 Kin - Gold */
+  --color-kin: #C5A572;
+  --color-kin-light: #D4BC93;
+
+  /* 和紙 Washi - Dark lacquerware tones */
+  --color-washi: #14120F;
+  --color-washi-panel: #1C1916;
+  --color-washi-dark: #252220;
+  --color-washi-border: #38342F;
+  --color-washi-inset: #0E0D0B;
+
+  /* 抹茶 Matcha */
+  --color-matcha: #7BA85A;
+  --color-matcha-wash: rgba(123, 168, 90, 0.1);
+
+  /* 狐 Kitsune */
+  --color-kitsune: #D4915E;
+
+  /* 藤 Fuji */
+  --color-fuji: #9B88C0;
+}
+
+/* ── Base ── */
+
+body {
+  font-family: var(--font-sans);
+  color: var(--color-sumi);
+  background-color: var(--color-washi);
+  background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='0.04'/%3E%3C/svg%3E");
+}
+
+::selection {
+  background: var(--color-ai-wash);
+  color: var(--color-sumi-deep);
+}
+
+/* ── Scrollbar ── */
+
+::-webkit-scrollbar { width: 6px; height: 6px; }
+::-webkit-scrollbar-track { background: transparent; }
+::-webkit-scrollbar-thumb { background: var(--color-washi-border); border-radius: 3px; }
+::-webkit-scrollbar-thumb:hover { background: var(--color-sumi-faint); }
+
+/* ── Section heading ── */
+
+.section-heading {
+  font-family: var(--font-serif);
+  font-weight: 600;
+  font-size: 0.9rem;
+  color: var(--color-sumi-light);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+/* ── Panels ── */
+
+.ink-panel {
+  border: 1px solid var(--color-washi-border);
+  background: var(--color-washi-panel);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.25);
+}
+
+.ink-inset {
+  background: var(--color-washi-inset);
+  border: 1px solid var(--color-washi-border);
+}
+
+/* ── Header brush stroke ── */
+
+.brush-border-bottom {
+  background-image: linear-gradient(
+    to right,
+    transparent 2%,
+    var(--color-washi-border) 6%,
+    var(--color-washi-border) 94%,
+    transparent 98%
+  );
+  background-size: 100% 1px;
+  background-position: bottom;
+  background-repeat: no-repeat;
+}
+
+/* ── Hanko stamp ── */
+
+.hanko {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 1.75rem;
+  height: 1.75rem;
+  border: 2px solid var(--color-shu);
+  border-radius: 3px;
+  color: var(--color-shu);
+  font-family: var(--font-serif);
+  font-size: 0.7rem;
+  font-weight: 800;
+  transform: rotate(-4deg);
+  opacity: 0.4;
+  transition: all 0.4s ease;
+}
+
+.hanko.active {
+  opacity: 1;
+  transform: rotate(-4deg) scale(1.05);
+}
+
+@keyframes shuPulse {
+  0%, 100% { box-shadow: 0 0 0 0 rgba(212, 96, 94, 0.4); }
+  50% { box-shadow: 0 0 0 5px rgba(212, 96, 94, 0); }
+}
+.shu-pulse { animation: shuPulse 2.5s ease-in-out infinite; }
+
+/* ── Ink dot marker ── */
+
+.ink-dot {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  flex-shrink: 0;
+  margin-top: 5px;
+}
+
+/* ── Fade-in for events ── */
+
+@keyframes inkFade {
+  from { opacity: 0; transform: translateY(3px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.ink-fade-in { animation: inkFade 0.25s ease-out; }
+
+/* ── Modal backdrop ── */
+
+.modal-backdrop {
+  background: rgba(5, 4, 3, 0.65);
+  backdrop-filter: blur(6px);
+}
+
+/* ── Buttons ── */
+
+.btn-ink {
+  font-family: var(--font-sans);
+  font-weight: 500;
+  font-size: 0.85rem;
+  padding: 0.4rem 1.1rem;
+  border: 1px solid var(--color-washi-border);
+  background: var(--color-washi-panel);
+  color: var(--color-sumi);
+  border-radius: 4px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  line-height: 1.4;
+}
+.btn-ink:hover {
+  background: var(--color-washi-dark);
+  border-color: var(--color-sumi-faint);
+}
+
+.btn-shu {
+  background: var(--color-shu);
+  color: #FAF8F4;
+  border-color: var(--color-shu);
+}
+.btn-shu:hover { background: #C04545; border-color: #C04545; }
+.btn-shu:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-matcha {
+  background: var(--color-matcha);
+  color: #FAF8F4;
+  border-color: var(--color-matcha);
+}
+.btn-matcha:hover { background: #6A9A4A; border-color: #6A9A4A; }
+.btn-matcha:disabled { opacity: 0.4; cursor: not-allowed; }
+
+.btn-ai {
+  background: var(--color-ai);
+  color: #FAF8F4;
+  border-color: var(--color-ai);
+}
+.btn-ai:hover { background: var(--color-ai-deep); border-color: var(--color-ai-deep); }
+.btn-ai:disabled { opacity: 0.4; cursor: not-allowed; }
+
+/* ── Kanji decorative label ── */
+
+.kanji-accent {
+  font-family: var(--font-serif);
+  font-weight: 800;
+  color: var(--color-sumi-faint);
+}

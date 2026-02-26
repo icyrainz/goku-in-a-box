@@ -25,46 +25,51 @@ export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => 
   const isRunning = status?.status === "running";
 
   return (
-    <header className="flex items-center justify-between px-6 py-4 bg-gray-900 text-white border-b border-gray-700">
-      <div className="flex items-center gap-4">
-        <h1 className="text-xl font-bold tracking-tight">Goku-in-a-Box</h1>
-        <div className="flex items-center gap-2">
-          <span
-            className={`w-2.5 h-2.5 rounded-full ${isRunning ? "bg-green-400 animate-pulse" : "bg-gray-500"}`}
-          />
-          <span className="text-sm text-gray-300 capitalize">
-            {status?.status ?? "loading..."}
+    <header className="flex items-center justify-between px-6 py-3.5 bg-washi-panel brush-border-bottom">
+      <div className="flex items-center gap-5">
+        <div className="flex items-baseline gap-2.5">
+          <span className="font-serif text-2xl font-extrabold text-sumi-deep tracking-tight leading-none">
+            悟空
+          </span>
+          <span className="font-serif text-base font-semibold text-sumi-light tracking-wide">
+            Goku-in-a-Box
+          </span>
+        </div>
+
+        <div className="flex items-center gap-2.5">
+          <div className={`hanko ${isRunning ? "active shu-pulse" : ""}`}>
+            {isRunning ? "活" : "止"}
+          </div>
+          <span className="text-sm text-sumi-light font-medium">
+            {isRunning ? "稼働中" : status?.status === "stopped" || status?.status === "not_running" ? "停止" : "..."}
           </span>
         </div>
       </div>
+
       <div className="flex gap-2">
         {onPromptClick && (
-          <button
-            onClick={onPromptClick}
-            className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium transition-colors"
-          >
+          <button onClick={onPromptClick} className="btn-ink">
+            <span className="kanji-accent text-xs mr-1.5">筆</span>
             Prompt
           </button>
         )}
         {onFilesClick && (
-          <button
-            onClick={onFilesClick}
-            className="px-4 py-1.5 bg-gray-700 hover:bg-gray-600 rounded text-sm font-medium transition-colors"
-          >
+          <button onClick={onFilesClick} className="btn-ink">
+            <span className="kanji-accent text-xs mr-1.5">巻</span>
             Files
           </button>
         )}
         <button
           onClick={() => startMutation.mutate()}
           disabled={isRunning || startMutation.isPending}
-          className="px-4 py-1.5 bg-green-600 hover:bg-green-500 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+          className="btn-ink btn-matcha"
         >
           {startMutation.isPending ? "Starting..." : "Start"}
         </button>
         <button
           onClick={() => stopMutation.mutate()}
           disabled={!isRunning || stopMutation.isPending}
-          className="px-4 py-1.5 bg-red-600 hover:bg-red-500 disabled:opacity-50 rounded text-sm font-medium transition-colors"
+          className="btn-ink btn-shu"
         >
           {stopMutation.isPending ? "Stopping..." : "Stop"}
         </button>

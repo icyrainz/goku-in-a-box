@@ -63,31 +63,35 @@ export function FileBrowser({ onClose }: { onClose: () => void }) {
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center modal-backdrop" onClick={onClose}>
       <div
-        className="bg-gray-900 border border-gray-700 rounded-lg w-[900px] h-[70vh] flex flex-col shadow-2xl"
+        className="bg-washi-panel border border-washi-border rounded-lg w-[900px] h-[70vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
-        <div className="flex items-center justify-between px-4 py-3 border-b border-gray-700">
-          <div className="flex items-center gap-2">
-            <h2 className="text-sm font-semibold text-gray-200 uppercase tracking-wider">Files</h2>
-            <span className="text-xs text-gray-500 font-mono">{currentPath}</span>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-washi-border">
+          <div className="flex items-center gap-3">
+            <span className="kanji-accent text-base">巻</span>
+            <h2 className="section-heading">Files</h2>
+            <span className="text-xs text-sumi-faint font-mono ml-1">{currentPath}</span>
           </div>
           <div className="flex items-center gap-2">
-            <button onClick={() => loadDir(currentPath)} className="text-xs text-gray-400 hover:text-gray-200">
+            <button onClick={() => loadDir(currentPath)} className="btn-ink text-xs">
               Refresh
             </button>
-            <button onClick={onClose} className="text-gray-500 hover:text-gray-300 text-lg leading-none">&times;</button>
+            <button onClick={onClose} className="text-sumi-faint hover:text-sumi text-lg leading-none ml-1 transition-colors">
+              &times;
+            </button>
           </div>
         </div>
 
         <div className="flex-1 flex overflow-hidden min-h-[400px]">
-          <div className="w-[300px] border-r border-gray-700 overflow-auto">
-            {error && <p className="p-3 text-xs text-red-400">{error}</p>}
+          {/* Directory tree */}
+          <div className="w-[300px] border-r border-washi-border overflow-auto bg-washi">
+            {error && <p className="p-3 text-xs text-shu font-medium">{error}</p>}
             {parentPath && (
               <button
                 onClick={() => loadDir(parentPath)}
-                className="w-full text-left px-3 py-1.5 text-xs hover:bg-gray-800 text-gray-400 font-mono"
+                className="w-full text-left px-4 py-2 text-sm hover:bg-washi-dark text-sumi-faint font-mono border-b border-washi-border/40 transition-colors"
               >
                 ..
               </button>
@@ -99,34 +103,37 @@ export function FileBrowser({ onClose }: { onClose: () => void }) {
                   const fullPath = `${currentPath}/${entry.name}`;
                   entry.type === "directory" ? loadDir(fullPath) : loadFile(fullPath);
                 }}
-                className={`w-full text-left px-3 py-1.5 text-xs hover:bg-gray-800 flex items-center gap-2 ${
-                  selectedFile?.path === `${currentPath}/${entry.name}` ? "bg-gray-800" : ""
+                className={`w-full text-left px-4 py-2 text-sm hover:bg-washi-dark flex items-center gap-2.5 border-b border-washi-border/20 transition-colors ${
+                  selectedFile?.path === `${currentPath}/${entry.name}` ? "bg-ai-wash" : ""
                 }`}
               >
-                <span className={entry.type === "directory" ? "text-blue-400" : "text-gray-400"}>
-                  {entry.type === "directory" ? "+" : " "}
+                <span className={`text-sm ${entry.type === "directory" ? "text-ai font-medium" : "text-sumi-faint"}`}>
+                  {entry.type === "directory" ? "+" : "\u00B7"}
                 </span>
-                <span className="text-gray-200 font-mono truncate flex-1">{entry.name}</span>
+                <span className="text-sumi font-mono truncate flex-1">{entry.name}</span>
                 {entry.type === "file" && (
-                  <span className="text-gray-600 shrink-0">{formatSize(entry.size)}</span>
+                  <span className="text-sumi-faint shrink-0 text-[11px]">{formatSize(entry.size)}</span>
                 )}
               </button>
             ))}
             {entries.length === 0 && !loading && (
-              <p className="p-3 text-xs text-gray-600 italic">Empty directory</p>
+              <p className="p-4 text-sm text-sumi-faint italic">Empty directory</p>
             )}
           </div>
 
-          <div className="flex-1 overflow-auto p-4">
+          {/* File preview */}
+          <div className="flex-1 overflow-auto p-5 bg-washi-panel">
             {selectedFile ? (
               <div>
-                <div className="text-xs text-gray-500 font-mono mb-2">{selectedFile.path}</div>
-                <pre className="text-xs text-gray-300 font-mono whitespace-pre-wrap break-words">
+                <div className="text-xs text-sumi-faint font-mono mb-3 pb-2 border-b border-washi-border/50">
+                  {selectedFile.path}
+                </div>
+                <pre className="text-sm text-sumi font-mono whitespace-pre-wrap break-words leading-relaxed">
                   {selectedFile.content}
                 </pre>
               </div>
             ) : (
-              <p className="text-gray-600 italic text-xs">Select a file to view its contents</p>
+              <p className="text-sumi-faint italic text-sm">Select a file to view its contents</p>
             )}
           </div>
         </div>
