@@ -15,7 +15,7 @@ export function telemetryRoutes(
   app.post("/stream", async (c) => {
     const body = await c.req.json<{
       iterationId: number;
-      events: { type: string; summary: string; timestamp?: string }[];
+      events: { type: string; summary: string; content?: string; timestamp?: string }[];
     }>();
 
     // Auto-create iteration row with the agent's ID if we haven't seen it
@@ -30,11 +30,11 @@ export function telemetryRoutes(
 
     let actionCount = 0;
     for (const event of body.events) {
-      db.insertEvent(dbIterationId, event.type, event.summary);
+      db.insertEvent(dbIterationId, event.type, event.summary, event.content);
       if (event.type === "tool_use") actionCount++;
       broadcaster.broadcast({
         type: event.type,
-        data: { iterationId: dbIterationId, summary: event.summary },
+        data: { iterationId: dbIterationId, summary: event.summary, content: event.content },
         timestamp: event.timestamp,
       });
     }
