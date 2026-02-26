@@ -92,6 +92,48 @@ export class DockerClient {
     return res.json() as Promise<any[]>;
   }
 
+  async execInContainer(containerId: string, cmd: string[]): Promise<string> {
+    // Create exec instance
+    const createRes = await this.fetch(`/containers/${containerId}/exec`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        AttachStdout: true,
+        AttachStderr: true,
+        Cmd: cmd,
+      }),
+    });
+    if (!createRes.ok) throw new Error(`Create exec failed: ${await createRes.text()}`);
+    const { Id: execId } = (await createRes.json()) as { Id: string };
+
+    // Start exec and get output
+    const startRes = await this.fetch(`/exec/${execId}/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Detach: false, Tty: false }),
+    });
+    if (!startRes.ok) throw new Error(`Start exec failed: ${await startRes.text()}`);
+
+    const raw = new Uint8Array(await startRes.arrayBuffer());
+    return this.stripDockerStreamHeader(raw);
+  }
+
+  private stripDockerStreamHeader(raw: Uint8Array): string {
+    // Docker multiplexed stream: each frame has 8-byte header [type(1) padding(3) size(4)]
+    const decoder = new TextDecoder();
+    let offset = 0;
+    let output = "";
+    while (offset + 8 <= raw.length) {
+      const size = (raw[offset + 4] << 24) | (raw[offset + 5] << 16) | (raw[offset + 6] << 8) | raw[offset + 7];
+      offset += 8;
+      if (offset + size <= raw.length) {
+        output += decoder.decode(raw.slice(offset, offset + size));
+      }
+      offset += size;
+    }
+    return output;
+  }
+
   async streamLogs(id: string, onData: (line: string) => void, signal?: AbortSignal) {
     const res = await this.fetch(
       `/containers/${id}/logs?follow=true&stdout=true&stderr=true&timestamps=true`,

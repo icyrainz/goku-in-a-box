@@ -11,6 +11,7 @@ import { createLlm } from "./llm";
 import { promptRoutes } from "./routes/prompt";
 import { sandboxRoutes } from "./routes/sandbox";
 import { telemetryRoutes } from "./routes/telemetry";
+import { filesRoutes } from "./routes/files";
 
 const db = createDb("data/sandbox.db");
 const docker = new DockerClient();
@@ -42,6 +43,7 @@ app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/api/prompt", promptRoutes(db));
 app.route("/api/sandbox", sandboxRoutes(sandbox));
 app.route("/api/telemetry", telemetryRoutes(db, broadcaster, cpLlm));
+app.route("/api/sandbox/files", filesRoutes(sandbox, docker));
 
 app.get(
   "/ws/live",
