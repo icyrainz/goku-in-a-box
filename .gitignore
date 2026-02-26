@@ -3,3 +3,6 @@ node_modules/
 control-plane/data/
 dist/
 .worktrees/
+.playwright-mcp/
+*.png
+snapshots/
