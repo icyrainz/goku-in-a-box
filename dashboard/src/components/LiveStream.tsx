@@ -44,6 +44,34 @@ const ACCENT_BORDER: Record<string, string> = {
 
 const HIDDEN_EVENTS = new Set(["step_start", "step_finish", "connected", "iteration_summary"]);
 
+/* ── Linkify URLs in text ── */
+
+const URL_RE = /(https?:\/\/[^\s<>"')\]]+[^\s<>"')\].,;:!?])/g;
+
+function Linkify({ text, className }: { text: string; className?: string }) {
+  const parts = text.split(URL_RE);
+  return (
+    <span className={className}>
+      {parts.map((part, i) =>
+        URL_RE.test(part) ? (
+          <a
+            key={i}
+            href={part}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="text-ai hover:text-ai-light underline decoration-ai/30 hover:decoration-ai/60 transition-colors"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {part}
+          </a>
+        ) : (
+          <span key={i}>{part}</span>
+        )
+      )}
+    </span>
+  );
+}
+
 /* ── Expanded content formatter ── */
 
 function FormatContent({ content, type }: { content: string; type: string }) {
@@ -61,9 +89,10 @@ function FormatContent({ content, type }: { content: string; type: string }) {
           {Object.entries(parsed).map(([key, value]) => (
             <div key={key} className="flex gap-2">
               <span className="text-sumi-faint shrink-0 font-mono">{key}:</span>
-              <span className="text-sumi whitespace-pre-wrap break-words">
-                {typeof value === "string" ? value : JSON.stringify(value, null, 2)}
-              </span>
+              <Linkify
+                text={typeof value === "string" ? value : JSON.stringify(value, null, 2)}
+                className="text-sumi whitespace-pre-wrap break-words"
+              />
             </div>
           ))}
         </div>
@@ -74,7 +103,7 @@ function FormatContent({ content, type }: { content: string; type: string }) {
   return (
     <div className={`mt-1 ml-6 pl-3 border-l-2 ${accent}`}>
       <pre className="p-3 ink-inset rounded text-xs text-sumi whitespace-pre-wrap break-words max-h-64 overflow-auto font-mono">
-        {content}
+        <Linkify text={content} />
       </pre>
     </div>
   );
@@ -143,7 +172,7 @@ function EventRow({ event, iterationSummary }: { event: any; iterationSummary?: 
         </span>
 
         {/* Summary */}
-        <span className="text-sumi truncate text-xs min-w-0 flex-1">{summary}</span>
+        <Linkify text={summary} className="text-sumi truncate text-xs min-w-0 flex-1" />
 
         {/* Expand arrow — right side */}
         {hasContent && (
