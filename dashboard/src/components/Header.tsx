@@ -1,10 +1,13 @@
+import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson, postJson } from "../api/client";
 
-type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string };
+type AgentType = "opencode" | "goose";
+type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string; agentType?: AgentType };
 
 export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => void; onFilesClick?: () => void }) {
   const queryClient = useQueryClient();
+  const [agentType, setAgentType] = useState<AgentType>("opencode");
 
   const { data: status } = useQuery({
     queryKey: ["sandbox-status"],
@@ -13,7 +16,7 @@ export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => 
   });
 
   const startMutation = useMutation({
-    mutationFn: () => postJson("/sandbox/start", {}),
+    mutationFn: () => postJson("/sandbox/start", { agentType }),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sandbox-status"] }),
   });
 
@@ -41,12 +44,16 @@ export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => 
             {isRunning ? "活" : "止"}
           </div>
           <span className="text-sm text-sumi-light font-medium">
-            {isRunning ? "稼働中" : status?.status === "stopped" || status?.status === "not_running" ? "停止" : "..."}
+            {isRunning
+              ? `稼働中 · ${status?.agentType ?? "opencode"}`
+              : status?.status === "stopped" || status?.status === "not_running"
+                ? "停止"
+                : "..."}
           </span>
         </div>
       </div>
 
-      <div className="flex gap-2">
+      <div className="flex gap-2 items-center">
         {onPromptClick && (
           <button onClick={onPromptClick} className="btn-ink">
             <span className="kanji-accent text-xs mr-1.5">筆</span>
@@ -59,6 +66,15 @@ export function Header({ onPromptClick, onFilesClick }: { onPromptClick?: () => 
             Files
           </button>
         )}
+        <select
+          value={agentType}
+          onChange={(e) => setAgentType(e.target.value as AgentType)}
+          disabled={isRunning}
+          className="btn-ink bg-transparent text-sm cursor-pointer disabled:opacity-40"
+        >
+          <option value="opencode">OpenCode</option>
+          <option value="goose">Goose</option>
+        </select>
         <button
           onClick={() => startMutation.mutate()}
           disabled={isRunning || startMutation.isPending}
