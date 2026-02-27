@@ -105,10 +105,6 @@ export function showcaseRoutes(
           "sh", "-c", manifest.command,
         ]);
         activePreview = { manifest, execId, port: manifest.port };
-        broadcaster.broadcast({
-          type: "showcase_launched",
-          data: { type: "web", port: manifest.port, label: manifest.label },
-        });
         return c.json({
           launched: true, type: "web",
           proxyUrl: "/api/showcase/proxy/", port: manifest.port,
