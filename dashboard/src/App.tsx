@@ -8,6 +8,7 @@ import { PromptModal } from "./components/PromptModal";
 import { FileBrowser } from "./components/FileBrowser";
 import { SnapshotModal } from "./components/SnapshotModal";
 import { StartModal } from "./components/StartModal";
+import { MailboxModal } from "./components/MailboxModal";
 
 const queryClient = new QueryClient();
 
@@ -16,11 +17,12 @@ export default function App() {
   const [filesOpen, setFilesOpen] = useState(false);
   const [snapshotOpen, setSnapshotOpen] = useState(false);
   const [startOpen, setStartOpen] = useState(false);
+  const [mailboxOpen, setMailboxOpen] = useState(false);
 
   return (
     <QueryClientProvider client={queryClient}>
       <div className="h-screen flex flex-col bg-washi text-sumi">
-        <Header onPromptClick={() => setPromptOpen(true)} onFilesClick={() => setFilesOpen(true)} onSnapshotClick={() => setSnapshotOpen(true)} onStartClick={() => setStartOpen(true)} />
+        <Header onPromptClick={() => setPromptOpen(true)} onFilesClick={() => setFilesOpen(true)} onSnapshotClick={() => setSnapshotOpen(true)} onStartClick={() => setStartOpen(true)} onMailboxClick={() => setMailboxOpen(true)} />
         <main className="flex-1 grid grid-cols-[1fr_380px] gap-5 p-5 overflow-hidden">
           <div className="ink-panel rounded-lg p-5 overflow-hidden">
             <LiveStream />
@@ -38,6 +40,7 @@ export default function App() {
         {filesOpen && <FileBrowser onClose={() => setFilesOpen(false)} />}
         {snapshotOpen && <SnapshotModal onClose={() => setSnapshotOpen(false)} />}
         {startOpen && <StartModal onClose={() => setStartOpen(false)} />}
+        {mailboxOpen && <MailboxModal onClose={() => setMailboxOpen(false)} />}
       </div>
     </QueryClientProvider>
   );

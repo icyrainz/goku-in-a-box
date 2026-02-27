@@ -33,3 +33,27 @@
   2. Current status
   3. Next steps (reference tasks)
 - Memory is your journal, not a copy of the tasks.
+
+## Mailbox — Two-Way Communication
+You have a mailbox for exchanging messages with the human operator.
+
+**Send a message to the human:**
+```bash
+curl -sf -X PUT "$CONTROL_PLANE_URL/api/mailbox/agent" \
+  -H "Content-Type: application/json" \
+  -d '{"message": "Your question or request here"}'
+```
+
+**Check for a reply from the human:**
+```bash
+MAILBOX=$(curl -sf "$CONTROL_PLANE_URL/api/mailbox")
+HUMAN_MSG=$(echo "$MAILBOX" | jq -r '.human_msg // ""')
+```
+
+If `human_msg` is non-empty, the human has responded. Act on it.
+
+**Rules:**
+- Only use the mailbox when you genuinely need clarification or human input.
+- Do not block waiting for a reply. Post your message, continue working, check later.
+- A new message replaces the old one on each side.
+- Note what you sent in /workspace/.memory.md so the next iteration knows to check for a reply.

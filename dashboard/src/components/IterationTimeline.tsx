@@ -161,9 +161,9 @@ export function IterationTimeline() {
                     </div>
                   </div>
 
-                  <div className="flex items-center justify-between mt-1">
+                  <div className="flex items-start justify-between mt-1 gap-2">
                     {iter.summary ? (
-                      <p className={`text-xs truncate ${selected ? "text-sumi" : "text-sumi-faint"}`}>
+                      <p className={`text-xs ${selected ? "text-sumi whitespace-pre-wrap" : "text-sumi-faint truncate"}`}>
                         {iter.summary}
                       </p>
                     ) : (
@@ -171,7 +171,7 @@ export function IterationTimeline() {
                         {isRunning ? "In progress..." : "No summary"}
                       </span>
                     )}
-                    <span className="text-[10px] font-mono text-sumi-faint shrink-0 ml-2">
+                    <span className="text-[10px] font-mono text-sumi-faint shrink-0">
                       {iter.action_count} act
                     </span>
                   </div>

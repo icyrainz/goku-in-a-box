@@ -74,6 +74,16 @@ export function createDb(path: string) {
     )
   `);
 
+  db.run(`
+    CREATE TABLE IF NOT EXISTS mailbox (
+      session_id TEXT PRIMARY KEY REFERENCES sessions(container_id),
+      agent_msg TEXT,
+      human_msg TEXT,
+      agent_updated_at TEXT,
+      human_updated_at TEXT
+    )
+  `);
+
   const stmts = {
     insertPrompt: db.prepare("INSERT INTO prompt_history (content) VALUES (?)"),
     getLatestPrompt: db.prepare("SELECT * FROM prompt_history ORDER BY id DESC LIMIT 1"),
@@ -123,6 +133,13 @@ export function createDb(path: string) {
     getSnapshot: db.prepare("SELECT * FROM snapshots WHERE id = ?"),
     deleteSnapshot: db.prepare("DELETE FROM snapshots WHERE id = ?"),
     updateSnapshotFilename: db.prepare("UPDATE snapshots SET filename = ? WHERE id = ?"),
+    getMailbox: db.prepare("SELECT * FROM mailbox WHERE session_id = ?"),
+    upsertMailboxAgent: db.prepare(
+      "INSERT INTO mailbox (session_id, agent_msg, agent_updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(session_id) DO UPDATE SET agent_msg = excluded.agent_msg, agent_updated_at = datetime('now')"
+    ),
+    upsertMailboxHuman: db.prepare(
+      "INSERT INTO mailbox (session_id, human_msg, human_updated_at) VALUES (?, ?, datetime('now')) ON CONFLICT(session_id) DO UPDATE SET human_msg = excluded.human_msg, human_updated_at = datetime('now')"
+    ),
   };
 
   return {
@@ -282,6 +299,21 @@ export function createDb(path: string) {
 
     updateSnapshotFilename(id: number, filename: string) {
       stmts.updateSnapshotFilename.run(filename, id);
+    },
+
+    getMailbox(sessionId: string) {
+      return stmts.getMailbox.get(sessionId) as {
+        session_id: string; agent_msg: string | null; human_msg: string | null;
+        agent_updated_at: string | null; human_updated_at: string | null;
+      } | null;
+    },
+
+    setMailboxAgent(sessionId: string, message: string) {
+      stmts.upsertMailboxAgent.run(sessionId, message);
+    },
+
+    setMailboxHuman(sessionId: string, message: string) {
+      stmts.upsertMailboxHuman.run(sessionId, message);
     },
   };
 }

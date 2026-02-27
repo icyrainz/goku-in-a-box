@@ -13,6 +13,7 @@ import { sandboxRoutes } from "./routes/sandbox";
 import { telemetryRoutes } from "./routes/telemetry";
 import { filesRoutes } from "./routes/files";
 import { snapshotRoutes } from "./routes/snapshots";
+import { mailboxRoutes } from "./routes/mailbox";
 
 const db = createDb("data/sandbox.db");
 const docker = new DockerClient();
@@ -57,6 +58,7 @@ app.route("/api/sandbox", sandboxRoutes(sandbox, db, broadcaster));
 app.route("/api/telemetry", telemetryRoutes(db, broadcaster, cpLlm));
 app.route("/api/sandbox/files", filesRoutes(sandbox, docker));
 app.route("/api/snapshots", snapshotRoutes(sandbox, docker, db, broadcaster));
+app.route("/api/mailbox", mailboxRoutes(db, broadcaster));
 
 app.get(
   "/ws/live",

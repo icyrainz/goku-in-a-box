@@ -4,7 +4,7 @@ import { fetchJson, postJson } from "../api/client";
 type AgentType = "opencode" | "goose";
 type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string; agentType?: AgentType; sessionId?: string | null };
 
-export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void; onStartClick?: () => void }) {
+export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartClick, onMailboxClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void; onStartClick?: () => void; onMailboxClick?: () => void }) {
   const queryClient = useQueryClient();
 
   const { data: status } = useQuery({
@@ -17,6 +17,13 @@ export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartCl
     mutationFn: () => postJson("/sandbox/stop", {}),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sandbox-status"] }),
   });
+
+  const { data: mailbox } = useQuery({
+    queryKey: ["mailbox"],
+    queryFn: () => fetchJson<{ agent_msg: string | null; human_msg: string | null }>("/mailbox"),
+    refetchInterval: 5000,
+  });
+  const hasMailboxPending = !!mailbox?.agent_msg && !mailbox?.human_msg;
 
   const isRunning = status?.status === "running";
 
@@ -63,6 +70,15 @@ export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartCl
           <button onClick={onSnapshotClick} className="btn-ink">
             <span className="kanji-accent text-xs mr-1.5">蔵</span>
             Snapshots
+          </button>
+        )}
+        {onMailboxClick && (
+          <button onClick={onMailboxClick} className="btn-ink relative">
+            <span className="kanji-accent text-xs mr-1.5">郵</span>
+            Mailbox
+            {hasMailboxPending && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-shu border border-washi-panel" />
+            )}
           </button>
         )}
         <button
