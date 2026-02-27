@@ -62,9 +62,9 @@ PREV_PROMPT=""
 BACKOFF=0
 MAX_BACKOFF=60
 
-LATEST_ID=$(curl -sf "$CONTROL_PLANE_URL/api/telemetry/iterations?limit=1" | jq -r '.iterations[0].id // 0' 2>/dev/null || echo "0")
-ITERATION=${LATEST_ID:-0}
-log "Resuming from iteration $ITERATION"
+# Each container starts fresh — control plane maps seq to DB ids
+ITERATION=0
+log "Starting iteration sequence from 0"
 
 while true; do
   ITERATION=$((ITERATION + 1))

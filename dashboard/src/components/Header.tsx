@@ -1,23 +1,16 @@
-import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { fetchJson, postJson } from "../api/client";
 
 type AgentType = "opencode" | "goose";
 type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string; agentType?: AgentType; sessionId?: string | null };
 
-export function Header({ onPromptClick, onFilesClick, onSnapshotClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void }) {
+export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void; onStartClick?: () => void }) {
   const queryClient = useQueryClient();
-  const [agentType, setAgentType] = useState<AgentType>("opencode");
 
   const { data: status } = useQuery({
     queryKey: ["sandbox-status"],
     queryFn: () => fetchJson<SandboxStatus>("/sandbox/status"),
     refetchInterval: 5000,
-  });
-
-  const startMutation = useMutation({
-    mutationFn: () => postJson("/sandbox/start", { agentType }),
-    onSuccess: () => queryClient.invalidateQueries({ queryKey: ["sandbox-status"] }),
   });
 
   const stopMutation = useMutation({
@@ -72,21 +65,12 @@ export function Header({ onPromptClick, onFilesClick, onSnapshotClick }: { onPro
             Snapshots
           </button>
         )}
-        <select
-          value={agentType}
-          onChange={(e) => setAgentType(e.target.value as AgentType)}
-          disabled={isRunning}
-          className="btn-ink bg-transparent text-sm cursor-pointer disabled:opacity-40"
-        >
-          <option value="opencode">OpenCode</option>
-          <option value="goose">Goose</option>
-        </select>
         <button
-          onClick={() => startMutation.mutate()}
-          disabled={isRunning || startMutation.isPending}
+          onClick={onStartClick}
+          disabled={isRunning}
           className="btn-ink btn-matcha"
         >
-          {startMutation.isPending ? "Starting..." : "Start"}
+          Start
         </button>
         <button
           onClick={() => stopMutation.mutate()}

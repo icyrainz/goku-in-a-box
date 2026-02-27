@@ -4,6 +4,7 @@ import { fetchJson } from "../api/client";
 
 type Iteration = {
   id: number;
+  seq: number;
   start_time: string;
   end_time: string | null;
   summary: string | null;
@@ -140,7 +141,7 @@ export function IterationTimeline() {
                   <div className="flex items-center justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <span className={`font-mono text-xs font-semibold ${selected ? "text-ai-light" : "text-sumi-light"}`}>
-                        #{iter.id}
+                        #{iter.seq}
                       </span>
                       {isRunning && (
                         <span className="text-[9px] font-mono text-matcha bg-matcha/10 border border-matcha/20 px-1.5 py-px rounded tracking-wide">
@@ -186,7 +187,7 @@ export function IterationTimeline() {
         <div className="shrink-0 mt-2 pt-2 border-t border-washi-border">
           <div className="flex items-center justify-between mb-2">
             <span className="text-[10px] font-mono text-sumi-faint tracking-widest uppercase">
-              Iteration #{detail.iteration.id} Events
+              Iteration Events
             </span>
             <div className="flex items-center gap-3">
               <span className="text-[10px] font-mono text-sumi-faint">

@@ -42,6 +42,7 @@ export function sandboxRoutes(manager: SandboxManager, db: ReturnType<typeof cre
     }
 
     db.clearPrompt();
+    db.closeOpenIterations();
     const containerId = await manager.start(agentType, env);
     db.endAllOpenSessions();
     db.createSession(containerId, agentType);

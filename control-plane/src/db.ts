@@ -43,10 +43,13 @@ export function createDb(path: string) {
     )
   `);
 
-  // Migration: add session_id column to iterations if missing
+  // Migrations
   const iterCols = db.prepare("PRAGMA table_info(iterations)").all() as { name: string }[];
   if (!iterCols.some((c) => c.name === "session_id")) {
     db.run("ALTER TABLE iterations ADD COLUMN session_id TEXT REFERENCES sessions(container_id)");
+  }
+  if (!iterCols.some((c) => c.name === "seq")) {
+    db.run("ALTER TABLE iterations ADD COLUMN seq INTEGER DEFAULT 0");
   }
 
   db.run(`
@@ -78,6 +81,8 @@ export function createDb(path: string) {
     startIteration: db.prepare("INSERT INTO iterations (start_time) VALUES (datetime('now'))"),
     startIterationWithId: db.prepare("INSERT OR IGNORE INTO iterations (id, start_time) VALUES (?, datetime('now'))"),
     startIterationWithSession: db.prepare("INSERT OR IGNORE INTO iterations (id, start_time, session_id) VALUES (?, datetime('now'), ?)"),
+    startIterationWithSeq: db.prepare("INSERT INTO iterations (seq, start_time, session_id) VALUES (?, datetime('now'), ?)"),
+    getIterationBySessionSeq: db.prepare("SELECT * FROM iterations WHERE session_id = ? AND seq = ?"),
     createSession: db.prepare("INSERT INTO sessions (container_id, agent_type) VALUES (?, ?)"),
     endSession: db.prepare("UPDATE sessions SET stopped_at = datetime('now') WHERE container_id = ?"),
     endAllOpenSessions: db.prepare("UPDATE sessions SET stopped_at = datetime('now') WHERE stopped_at IS NULL"),
@@ -85,6 +90,12 @@ export function createDb(path: string) {
     getLatestSession: db.prepare("SELECT * FROM sessions ORDER BY rowid DESC LIMIT 1"),
     getSessionByContainerId: db.prepare("SELECT * FROM sessions WHERE container_id = ?"),
     getIterationsBySession: db.prepare("SELECT * FROM iterations WHERE session_id = ? ORDER BY id DESC LIMIT ? OFFSET ?"),
+    getRecentEventsBySession: db.prepare(`
+      SELECT e.*, i.seq FROM events e
+      JOIN iterations i ON e.iteration_id = i.id
+      WHERE i.session_id = ?
+      ORDER BY e.id DESC LIMIT ?
+    `),
     endIteration: db.prepare(
       "UPDATE iterations SET end_time = datetime('now'), summary = ?, action_count = ?, error_count = ? WHERE id = ?"
     ),
@@ -142,6 +153,21 @@ export function createDb(path: string) {
       return Number(result.lastInsertRowid);
     },
 
+    /** Start or get an iteration by session-local sequence number. Returns the DB id. */
+    startIterationBySeq(seq: number, sessionId: string): number {
+      const existing = stmts.getIterationBySessionSeq.get(sessionId, seq) as { id: number } | null;
+      if (existing) return existing.id;
+      const result = stmts.startIterationWithSeq.run(seq, sessionId);
+      return Number(result.lastInsertRowid);
+    },
+
+    getIterationBySessionSeq(sessionId: string, seq: number) {
+      return stmts.getIterationBySessionSeq.get(sessionId, seq) as {
+        id: number; seq: number; start_time: string; end_time: string | null;
+        summary: string | null; action_count: number; error_count: number;
+      } | null;
+    },
+
     endIteration(id: number, summary: string, actionCount: number, errorCount: number) {
       stmts.endIteration.run(summary, actionCount, errorCount, id);
     },
@@ -163,6 +189,13 @@ export function createDb(path: string) {
 
     insertEvent(iterationId: number, type: string, summary: string, content?: string) {
       stmts.insertEvent.run(iterationId, type, summary, content ?? null);
+    },
+
+    getRecentEventsBySession(sessionId: string, limit: number) {
+      return stmts.getRecentEventsBySession.all(sessionId, limit) as {
+        id: number; iteration_id: number; timestamp: string; type: string;
+        summary: string; content: string | null; seq: number;
+      }[];
     },
 
     getEventsByIteration(iterationId: number) {
@@ -188,6 +221,7 @@ export function createDb(path: string) {
     closeOpenIterations() {
       stmts.closeOpenIterations.run();
     },
+
 
     createSession(containerId: string, agentType: string) {
       stmts.createSession.run(containerId, agentType);

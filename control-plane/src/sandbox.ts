@@ -22,6 +22,8 @@ export class SandboxManager {
     }
     const image = IMAGE_MAP[agentType];
     const containerName = `goku-sandbox-${agentType}`;
+    // Remove any stale container with the same name (e.g. leftover from a crash)
+    await this.docker.removeContainer(containerName).catch(() => {});
     const envArr = Object.entries(env).map(([k, v]) => `${k}=${v}`);
     const { Id } = await this.docker.createContainer({
       image,
@@ -60,6 +62,7 @@ export class SandboxManager {
 
     const image = IMAGE_MAP[agentType];
     const containerName = `goku-sandbox-${agentType}`;
+    await this.docker.removeContainer(containerName).catch(() => {});
     const envArr = Object.entries(env).map(([k, v]) => `${k}=${v}`);
 
     const { Id } = await this.docker.createContainer({

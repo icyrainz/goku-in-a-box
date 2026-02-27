@@ -17,7 +17,9 @@ describe("telemetry routes", () => {
   });
 
   it("POST /stream ingests events and broadcasts them", async () => {
-    const iterId = db.startIteration();
+    // Create session so the route can resolve the seq
+    db.createSession("c1", "opencode");
+
     const broadcasted: any[] = [];
     const fakeWs = { send: (m: string) => broadcasted.push(JSON.parse(m)) };
     broadcaster.register(fakeWs as any);
@@ -26,7 +28,7 @@ describe("telemetry routes", () => {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        iterationId: iterId,
+        iterationId: 1, // seq number
         events: [
           { type: "thought", summary: "Thinking about the problem" },
           { type: "tool_call", summary: "Running bash: ls" },
@@ -38,19 +40,36 @@ describe("telemetry routes", () => {
     const body = (await res.json()) as any;
     expect(body.received).toBe(2);
 
-    const events = db.getEventsByIteration(iterId);
+    // Route creates a DB iteration; find it by session
+    const iters = db.getIterationsBySession("c1", 10, 0);
+    expect(iters).toHaveLength(1);
+    const dbId = iters[0].id;
+
+    const events = db.getEventsByIteration(dbId);
     expect(events).toHaveLength(2);
     expect(broadcasted).toHaveLength(2);
+    // Broadcast uses seq, not DB id
+    expect(broadcasted[0].data.iterationId).toBe(1);
   });
 
   it("POST /summary records end-of-iteration data", async () => {
-    const iterId = db.startIteration();
+    db.createSession("c1", "opencode");
+
+    // First stream to create the iteration
+    await app.request("/api/telemetry/stream", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        iterationId: 1,
+        events: [{ type: "thought", summary: "test" }],
+      }),
+    });
 
     const res = await app.request("/api/telemetry/summary", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        iterationId: iterId,
+        iterationId: 1,
         summary: "Explored the environment",
         actionCount: 5,
         errorCount: 0,
@@ -59,7 +78,8 @@ describe("telemetry routes", () => {
     });
 
     expect(res.status).toBe(200);
-    const iter = db.getIteration(iterId);
+    const iters = db.getIterationsBySession("c1", 10, 0);
+    const iter = db.getIteration(iters[0].id);
     expect(iter?.summary).toBe("Explored the environment");
     expect(iter?.action_count).toBe(5);
 
@@ -119,22 +139,48 @@ describe("telemetry routes", () => {
     expect(body.iterations).toHaveLength(2);
   });
 
-  it("POST /stream auto-tags iteration with active session", async () => {
+  it("POST /stream auto-creates iteration scoped to active session", async () => {
     db.createSession("c1", "opencode");
 
     const res = await app.request("/api/telemetry/stream", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        iterationId: 42,
+        iterationId: 42, // seq number from agent
         events: [{ type: "thought", summary: "test" }],
       }),
     });
     expect(res.status).toBe(200);
 
-    // Verify iteration is scoped to session
+    // Verify iteration is scoped to session with correct seq
     const sessionIters = db.getIterationsBySession("c1", 10, 0);
     expect(sessionIters).toHaveLength(1);
-    expect(sessionIters[0].id).toBe(42);
+    expect(sessionIters[0].seq).toBe(42);
+  });
+
+  it("POST /stream deduplicates repeated events within same iteration", async () => {
+    db.createSession("c1", "opencode");
+
+    const broadcasted: any[] = [];
+    const fakeWs = { send: (m: string) => broadcasted.push(JSON.parse(m)) };
+    broadcaster.register(fakeWs as any);
+
+    // Send same event twice
+    for (let i = 0; i < 2; i++) {
+      await app.request("/api/telemetry/stream", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          iterationId: 1,
+          events: [{ type: "thought", summary: "Same thought" }],
+        }),
+      });
+    }
+
+    // Should only have one event despite two POSTs
+    const iters = db.getIterationsBySession("c1", 10, 0);
+    const events = db.getEventsByIteration(iters[0].id);
+    expect(events).toHaveLength(1);
+    expect(broadcasted).toHaveLength(1);
   });
 });

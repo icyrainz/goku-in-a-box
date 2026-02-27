@@ -1,7 +1,5 @@
 // control-plane/src/docker.ts
-const DOCKER_API_VERSION = process.env.DOCKER_API_VERSION
-  ? `v${process.env.DOCKER_API_VERSION}`
-  : "v1.43";
+const DOCKER_API_VERSION = `v${process.env.DOCKER_API_VERSION ?? "1.47"}`;
 
 export class DockerClient {
   readonly socketPath: string;

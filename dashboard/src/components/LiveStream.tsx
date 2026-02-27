@@ -1,5 +1,7 @@
 import { useRef, useEffect, useState, useCallback } from "react";
+import { useQuery } from "@tanstack/react-query";
 import { useWebSocket } from "../hooks/useWebSocket";
+import { fetchJson } from "../api/client";
 
 /* ── Event type styling maps ── */
 
@@ -45,7 +47,21 @@ const ACCENT_BORDER: Record<string, string> = {
   connected: "border-fuji/30",
 };
 
-const HIDDEN_EVENTS = new Set(["step_start", "step_finish", "connected", "iteration_summary"]);
+const TOOL_BADGE: Record<string, string> = {
+  read: "text-ai bg-ai/10 border-ai/20",
+  write: "text-shu bg-shu/10 border-shu/20",
+  edit: "text-kitsune bg-kitsune/10 border-kitsune/20",
+  bash: "text-fuji bg-fuji/10 border-fuji/20",
+};
+
+function getToolName(summary: string): string | null {
+  const match = summary.match(/^(\w+?)[\s:]/);
+  if (!match) return null;
+  const name = match[1].toLowerCase();
+  return name in TOOL_BADGE ? name : null;
+}
+
+const HIDDEN_EVENTS = new Set(["step_start", "step_finish", "connected", "iteration_summary", "ping"]);
 
 /* ── Linkify URLs in text ── */
 
@@ -150,6 +166,8 @@ function EventRow({ event, iterationSummary }: { event: any; iterationSummary?: 
   }
 
   const badge = BADGE_STYLE[event.type] ?? "text-sumi-light bg-sumi-light/10 border-sumi-light/15";
+  const toolName = event.type === "tool_use" ? getToolName(summary) : null;
+  const toolBadge = toolName ? TOOL_BADGE[toolName] : null;
 
   return (
     <div className="ink-fade-in">
@@ -174,6 +192,15 @@ function EventRow({ event, iterationSummary }: { event: any; iterationSummary?: 
           {event.type}
         </span>
 
+        {/* Tool name sub-badge — fixed width so summary text aligns */}
+        {toolBadge && (
+          <span
+            className={`shrink-0 w-[42px] text-center text-[10px] font-semibold tracking-wide py-px rounded border leading-tight ${toolBadge}`}
+          >
+            {toolName}
+          </span>
+        )}
+
         {/* Summary */}
         <Linkify text={summary} className="text-sumi truncate text-xs min-w-0 flex-1" />
 
@@ -195,12 +222,28 @@ function EventRow({ event, iterationSummary }: { event: any; iterationSummary?: 
 
 /* ── LiveStream container ── */
 
+type SandboxStatus = { status: "running" | "stopped" | "not_running" };
+
 export function LiveStream() {
   const wsUrl = `${window.location.protocol === "https:" ? "wss:" : "ws:"}//${window.location.host}/ws/live`;
-  const { events, connected, clearEvents } = useWebSocket(wsUrl);
+  const { events, connected, clearEvents, seedEvents } = useWebSocket(wsUrl);
   const scrollRef = useRef<HTMLDivElement>(null);
   const bottomRef = useRef<HTMLDivElement>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
+
+  // Seed with recent events from current session on mount
+  useEffect(() => {
+    fetchJson<{ events: { type: string; data: unknown; timestamp: string }[] }>("/telemetry/events/recent?limit=200")
+      .then((res) => { if (res.events.length > 0) seedEvents(res.events); })
+      .catch(() => {});
+  }, [seedEvents]);
+
+  const { data: sandbox } = useQuery({
+    queryKey: ["sandbox-status"],
+    queryFn: () => fetchJson<SandboxStatus>("/sandbox/status"),
+    refetchInterval: 5000,
+  });
+  const agentRunning = sandbox?.status === "running";
 
   const visibleEvents = events.filter((e) => !HIDDEN_EVENTS.has(e.type));
 
@@ -260,10 +303,22 @@ export function LiveStream() {
             </button>
           )}
           <div className="flex items-center gap-1.5">
-            <span className={`w-1.5 h-1.5 rounded-full ${connected ? "bg-matcha" : "bg-shu"}`} />
-            <span className={`text-xs font-medium ${connected ? "text-matcha" : "text-shu"}`}>
-              {connected ? "Connected" : "Disconnected"}
-            </span>
+            {!connected ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-shu" />
+                <span className="text-xs font-medium text-shu">Disconnected</span>
+              </>
+            ) : agentRunning ? (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-matcha animate-pulse" />
+                <span className="text-xs font-medium text-matcha">Live</span>
+              </>
+            ) : (
+              <>
+                <span className="w-1.5 h-1.5 rounded-full bg-sumi-faint" />
+                <span className="text-xs font-medium text-sumi-faint">Idle</span>
+              </>
+            )}
           </div>
         </div>
       </div>
