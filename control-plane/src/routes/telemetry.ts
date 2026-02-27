@@ -2,11 +2,16 @@ import { Hono } from "hono";
 import type { createDb } from "../db";
 import type { WsBroadcaster } from "../ws";
 import type { createLlm } from "../llm";
+import type { SandboxManager } from "../sandbox";
+import type { DockerClient } from "../docker";
+import { readShowcaseManifest } from "./showcase";
 
 export function telemetryRoutes(
   db: ReturnType<typeof createDb>,
   broadcaster: WsBroadcaster,
   llm?: ReturnType<typeof createLlm>,
+  sandbox?: SandboxManager,
+  docker?: DockerClient,
 ) {
   const app = new Hono();
 
@@ -64,6 +69,20 @@ export function telemetryRoutes(
         data: { iterationId: seq, summary: event.summary, content: event.content },
         timestamp: event.timestamp,
       });
+
+      // Detect showcase manifest changes
+      if (
+        sandbox &&
+        docker &&
+        (event.summary?.includes(".showcase.json") ||
+          event.content?.includes(".showcase.json"))
+      ) {
+        readShowcaseManifest(sandbox, docker).then((manifest) => {
+          if (manifest) {
+            broadcaster.broadcast({ type: "showcase_ready", data: manifest });
+          }
+        }).catch(() => {});
+      }
     }
 
     // Update action count in real-time so the dashboard shows progress (without setting end_time)

@@ -14,6 +14,7 @@ import { telemetryRoutes } from "./routes/telemetry";
 import { filesRoutes } from "./routes/files";
 import { snapshotRoutes } from "./routes/snapshots";
 import { mailboxRoutes } from "./routes/mailbox";
+import { showcaseRoutes } from "./routes/showcase";
 
 const db = createDb("data/sandbox.db");
 const docker = new DockerClient();
@@ -55,10 +56,11 @@ app.use("*", cors());
 app.get("/health", (c) => c.json({ status: "ok" }));
 app.route("/api/prompt", promptRoutes(db));
 app.route("/api/sandbox", sandboxRoutes(sandbox, db, broadcaster));
-app.route("/api/telemetry", telemetryRoutes(db, broadcaster, cpLlm));
+app.route("/api/telemetry", telemetryRoutes(db, broadcaster, cpLlm, sandbox, docker));
 app.route("/api/sandbox/files", filesRoutes(sandbox, docker));
 app.route("/api/snapshots", snapshotRoutes(sandbox, docker, db, broadcaster));
 app.route("/api/mailbox", mailboxRoutes(db, broadcaster));
+app.route("/api/showcase", showcaseRoutes(sandbox, docker, broadcaster));
 
 app.get(
   "/ws/live",
