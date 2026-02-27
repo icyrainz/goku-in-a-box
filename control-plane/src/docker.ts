@@ -92,6 +92,34 @@ export class DockerClient {
     return res.json() as Promise<any[]>;
   }
 
+  buildExecPayload(cmd: string[], detach: boolean) {
+    return {
+      AttachStdout: !detach,
+      AttachStderr: !detach,
+      Detach: detach,
+      Cmd: cmd,
+    };
+  }
+
+  async execDetached(containerId: string, cmd: string[]): Promise<string> {
+    const createRes = await this.fetch(`/containers/${containerId}/exec`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(this.buildExecPayload(cmd, true)),
+    });
+    if (!createRes.ok) throw new Error(`Create exec failed: ${await createRes.text()}`);
+    const { Id: execId } = (await createRes.json()) as { Id: string };
+
+    const startRes = await this.fetch(`/exec/${execId}/start`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ Detach: true, Tty: false }),
+    });
+    if (!startRes.ok) throw new Error(`Start exec failed: ${await startRes.text()}`);
+
+    return execId;
+  }
+
   async execInContainer(containerId: string, cmd: string[]): Promise<string> {
     // Create exec instance
     const createRes = await this.fetch(`/containers/${containerId}/exec`, {

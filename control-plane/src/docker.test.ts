@@ -26,3 +26,23 @@ describe("DockerClient", () => {
     expect(payload.HostConfig.Binds).toContain("/host:/container");
   });
 });
+
+describe("DockerClient.buildExecPayload", () => {
+  it("creates detached payload", () => {
+    const client = new DockerClient();
+    const payload = client.buildExecPayload(["sh", "-c", "npm start"], true);
+    expect(payload.Cmd).toEqual(["sh", "-c", "npm start"]);
+    expect(payload.Detach).toBe(true);
+    expect(payload.AttachStdout).toBe(false);
+    expect(payload.AttachStderr).toBe(false);
+  });
+
+  it("creates blocking payload", () => {
+    const client = new DockerClient();
+    const payload = client.buildExecPayload(["cat", "/workspace/.showcase.json"], false);
+    expect(payload.Cmd).toEqual(["cat", "/workspace/.showcase.json"]);
+    expect(payload.Detach).toBe(false);
+    expect(payload.AttachStdout).toBe(true);
+    expect(payload.AttachStderr).toBe(true);
+  });
+});
