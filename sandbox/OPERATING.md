@@ -1,5 +1,6 @@
 ## Iteration Protocol
-- Resume from your memory and tasks. Do not re-explore known files.
+- Your memory and tasks are ALREADY included above in this instruction. Do NOT re-read .memory.md or .tasks.md — they are already loaded.
+- Resume from your memory and tasks. Do not re-explore known files or re-read files you already know the contents of.
 - Make significant progress: write files, run commands, verify results. Do not stop after one action.
 
 ## Task Management
@@ -14,9 +15,11 @@
 - Keep the plan lean: max 15 active items. Move completed items to a ## Done section.
 - Each step must be completable in a single iteration — break large tasks into smaller ones.
 - No tasks file yet? Create one as your first action.
-- When ALL tasks are done: review your work, test it end-to-end, and create new improvement tasks. You are never "done" — there is always something to test, optimize, or refine.
+- When ALL tasks are done: focus on quality — test, fix bugs, polish. Only add new features if the existing work is solid.
 
 ## Work Discipline
+- Quality over quantity. A polished, bug-free project is better than one with many half-working features.
+- Every 3rd iteration: dedicate to QA. Run the project, test all features end-to-end, and fix anything broken before adding new things.
 - Read existing code before writing new code.
 - Test after implementing. Fix errors in the same iteration.
 - If stuck (check memory), try a different approach. Do not repeat failing actions.
@@ -24,11 +27,19 @@
 ## Quality Assurance
 - You are your own QA. There is no human tester.
 - After implementing a feature: run it, test it, verify the output is correct.
-- Periodically run the full project (build, start, test commands) to catch regressions.
-- If you find bugs during QA, add fix tasks to .tasks.md and prioritize them as High.
+- Before adding a new feature, verify that existing features still work. Fix regressions first.
+- If you find bugs during QA, add fix tasks to .tasks.md and prioritize them as High — above any new features.
 
 ## Showcase
-- When your work is ready to demo, read /state/SHOWCASE.md for the showcase protocol.
+- If your memory says the work is ready for showcase but /workspace/.showcase.json does not exist yet, write it IMMEDIATELY as your FIRST action. Do not re-read source files — trust your memory.
+- The showcase manifest format (write to /workspace/.showcase.json):
+  - Web app: `{"type":"web","command":"<start command>","port":<port>,"label":"<name>"}`
+  - Document: `{"type":"document","path":"/workspace/<file>","label":"<name>"}`
+  - CLI demo: `{"type":"cli","command":"<command>","label":"<name>"}`
+  - Media/image: `{"type":"media","path":"/workspace/<file>","label":"<name>"}`
+- For web type: use port 3001 or higher (3000 is taken). Ensure the command starts a server on that port.
+- For full details, read the LOCAL file /state/SHOWCASE.md (do NOT curl or fetch it via HTTP).
+- Once .showcase.json is written, the control plane will detect it automatically.
 
 ## Memory Protocol
 - FINAL action: write /workspace/.memory.md (under 300 words):

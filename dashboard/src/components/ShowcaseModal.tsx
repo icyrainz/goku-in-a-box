@@ -89,14 +89,23 @@ export function ShowcaseModal({ onClose }: { onClose: () => void }) {
     if (!launchResult) return null;
 
     switch (launchResult.type) {
-      case "web":
+      case "web": {
+        const directUrl = `http://localhost:${launchResult.port}`;
         return (
-          <iframe
-            src="/api/showcase/proxy/"
-            className="w-full flex-1 border border-washi-border rounded bg-white"
-            title={manifest?.label ?? "Showcase preview"}
-          />
+          <div className="flex flex-col items-center gap-3 py-6">
+            <p className="text-sm text-sumi-faint">Game server is running at:</p>
+            <a
+              href={directUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="font-mono text-ai hover:text-ai/80 underline underline-offset-4 text-lg"
+            >
+              {directUrl}
+            </a>
+            <p className="text-xs text-sumi-faint/60">Opens in a new tab</p>
+          </div>
         );
+      }
 
       case "cli":
         return (
@@ -138,7 +147,7 @@ export function ShowcaseModal({ onClose }: { onClose: () => void }) {
       onClick={onClose}
     >
       <div
-        className="bg-washi-panel border border-washi-border rounded-lg w-[900px] max-h-[90vh] flex flex-col shadow-2xl"
+        className="bg-washi-panel border border-washi-border rounded-lg w-[95vw] max-w-[1400px] h-[90vh] flex flex-col shadow-2xl"
         onClick={(e) => e.stopPropagation()}
       >
         {/* Header */}
@@ -166,7 +175,7 @@ export function ShowcaseModal({ onClose }: { onClose: () => void }) {
         </div>
 
         {/* Body */}
-        <div className="flex-1 overflow-auto p-5 flex flex-col gap-4 min-h-[300px]">
+        <div className="flex-1 overflow-auto p-5 flex flex-col gap-4 min-h-0">
           {isLoading && (
             <p className="text-sm text-sumi-faint italic">Loading...</p>
           )}

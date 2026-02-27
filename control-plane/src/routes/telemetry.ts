@@ -25,16 +25,15 @@ export function telemetryRoutes(
   function resolveIteration(seq: number): number {
     if (seqToDbId.has(seq)) return seqToDbId.get(seq)!;
 
-    const session = db.getActiveSession();
+    const session = db.getActiveSession() ?? db.getLatestSession();
     const sessionId = session?.container_id;
 
     let dbId: number;
+    db.closeOpenIterations();
     if (sessionId) {
-      db.closeOpenIterations();
       dbId = db.startIterationBySeq(seq, sessionId);
     } else {
       // Fallback: no active session (shouldn't happen normally)
-      db.closeOpenIterations();
       dbId = db.startIteration(undefined, undefined);
     }
 

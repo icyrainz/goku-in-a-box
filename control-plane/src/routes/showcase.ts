@@ -172,22 +172,23 @@ export function showcaseRoutes(
     // Strip the /proxy prefix from the path
     const subpath = c.req.path.replace(/^\/api\/showcase\/proxy\/?/, "") || "";
     const url = new URL(c.req.url);
-    const targetUrl = `http://localhost:${port}/${subpath}${url.search}`;
-
-    // Forward headers, removing host
-    const headers = new Headers(c.req.raw.headers);
-    headers.delete("host");
+    const targetUrl = `http://127.0.0.1:${port}/${subpath}${url.search}`;
 
     try {
       const proxyRes = await fetch(targetUrl, {
         method: c.req.method,
-        headers,
+        headers: { "Accept": c.req.header("accept") ?? "*/*" },
         body: c.req.method !== "GET" && c.req.method !== "HEAD" ? c.req.raw.body : undefined,
       });
 
-      return new Response(proxyRes.body, {
+      // Read full body to avoid socket issues with streamed passthrough
+      const body = await proxyRes.arrayBuffer();
+      const respHeaders = new Headers(proxyRes.headers);
+      respHeaders.delete("transfer-encoding");
+
+      return new Response(body, {
         status: proxyRes.status,
-        headers: proxyRes.headers,
+        headers: respHeaders,
       });
     } catch (err: any) {
       return c.json({ error: `Proxy error: ${err.message}` }, 502);

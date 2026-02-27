@@ -25,16 +25,25 @@ export class DockerClient {
     binds?: string[];
     networkMode?: string;
     extraHosts?: string[];
+    portBindings?: Record<string, Array<{ HostPort: string }>>;
   }) {
+    const exposedPorts: Record<string, object> = {};
+    if (config.portBindings) {
+      for (const containerPort of Object.keys(config.portBindings)) {
+        exposedPorts[containerPort] = {};
+      }
+    }
     return {
       Image: config.image,
       Cmd: config.cmd,
       Env: config.env ?? [],
       Tty: false,
+      ExposedPorts: Object.keys(exposedPorts).length > 0 ? exposedPorts : undefined,
       HostConfig: {
         Binds: config.binds ?? [],
-        NetworkMode: config.networkMode ?? "host",
+        NetworkMode: config.networkMode ?? "bridge",
         ExtraHosts: config.extraHosts ?? [],
+        PortBindings: config.portBindings,
       },
     };
   }
@@ -47,6 +56,7 @@ export class DockerClient {
     binds?: string[];
     networkMode?: string;
     extraHosts?: string[];
+    portBindings?: Record<string, Array<{ HostPort: string }>>;
   }) {
     const payload = this.buildCreatePayload(config);
     const res = await this.fetch(`/containers/create?name=${config.name}`, {

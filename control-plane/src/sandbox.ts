@@ -7,6 +7,17 @@ const IMAGE_MAP: Record<AgentType, string> = {
   goose: "goku-sandbox-goose:latest",
 };
 
+/** Ports published from container to host for showcase web servers. */
+const SHOWCASE_PORTS = [3001, 3002, 3003, 8080, 8081];
+
+function buildPortBindings() {
+  const bindings: Record<string, Array<{ HostPort: string }>> = {};
+  for (const port of SHOWCASE_PORTS) {
+    bindings[`${port}/tcp`] = [{ HostPort: String(port) }];
+  }
+  return bindings;
+}
+
 export class SandboxManager {
   containerId: string | null = null;
   agentType: AgentType | null = null;
@@ -33,6 +44,7 @@ export class SandboxManager {
         ...envArr,
       ],
       extraHosts: ["host.docker.internal:host-gateway"],
+      portBindings: buildPortBindings(),
     });
     await this.docker.startContainer(Id);
     this.containerId = Id;
@@ -70,6 +82,7 @@ export class SandboxManager {
       name: containerName,
       env: [`CONTROL_PLANE_URL=http://host.docker.internal:3000`, ...envArr],
       extraHosts: ["host.docker.internal:host-gateway"],
+      portBindings: buildPortBindings(),
     });
 
     // Inject workspace tar before starting so agent-loop finds restored files
