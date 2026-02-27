@@ -4,7 +4,7 @@ import { fetchJson, postJson } from "../api/client";
 type AgentType = "opencode" | "goose";
 type SandboxStatus = { status: "running" | "stopped" | "not_running"; containerId?: string; agentType?: AgentType; sessionId?: string | null };
 
-export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartClick, onMailboxClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void; onStartClick?: () => void; onMailboxClick?: () => void }) {
+export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onShowcaseClick, onStartClick, onMailboxClick }: { onPromptClick?: () => void; onFilesClick?: () => void; onSnapshotClick?: () => void; onShowcaseClick?: () => void; onStartClick?: () => void; onMailboxClick?: () => void }) {
   const queryClient = useQueryClient();
 
   const { data: status } = useQuery({
@@ -24,6 +24,13 @@ export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartCl
     refetchInterval: 5000,
   });
   const hasMailboxPending = !!mailbox?.agent_msg && !mailbox?.human_msg;
+
+  const { data: showcaseData } = useQuery({
+    queryKey: ["showcase"],
+    queryFn: () => fetchJson<{ manifest: any }>("/showcase"),
+    refetchInterval: 5000,
+  });
+  const hasShowcase = !!showcaseData?.manifest;
 
   const isRunning = status?.status === "running";
 
@@ -70,6 +77,15 @@ export function Header({ onPromptClick, onFilesClick, onSnapshotClick, onStartCl
           <button onClick={onSnapshotClick} className="btn-ink">
             <span className="kanji-accent text-xs mr-1.5">蔵</span>
             Snapshots
+          </button>
+        )}
+        {onShowcaseClick && (
+          <button onClick={onShowcaseClick} className="btn-ink relative">
+            <span className="kanji-accent text-xs mr-1.5">展</span>
+            Showcase
+            {hasShowcase && (
+              <span className="absolute -top-1 -right-1 w-2 h-2 rounded-full bg-matcha border border-washi-panel" />
+            )}
           </button>
         )}
         {onMailboxClick && (
