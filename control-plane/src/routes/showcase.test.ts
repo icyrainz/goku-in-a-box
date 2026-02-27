@@ -57,44 +57,46 @@ describe("showcase routes", () => {
     expect(body.label).toBeNull();
   });
 
+  it("GET /status clears stale preview when sandbox is gone", async () => {
+    // Launch a web preview first
+    docker.execInContainer = mock((_id: string, cmd: string[]) => {
+      if (cmd[0] === "cat") {
+        return Promise.resolve(JSON.stringify({ type: "web", command: "npm start", port: 3001 }));
+      }
+      return Promise.resolve("");
+    });
+    await app.request("/api/showcase/launch", { method: "POST" });
+
+    // Now sandbox is gone
+    sandbox.containerId = null;
+    const res = await app.request("/api/showcase/status");
+    const body = (await res.json()) as any;
+    expect(body.running).toBe(false);
+  });
+
   // --- POST /launch ---
 
   it("POST /launch returns 503 when no container", async () => {
     sandbox.containerId = null;
-    const res = await app.request("/api/showcase/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "cli", command: "echo hello" }),
-    });
+    const res = await app.request("/api/showcase/launch", { method: "POST" });
     expect(res.status).toBe(503);
   });
 
   it("POST /launch returns 404 when no manifest", async () => {
     docker.execInContainer = mock(() => Promise.reject(new Error("file not found")));
-    const res = await app.request("/api/showcase/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "cli", command: "echo hello" }),
-    });
+    const res = await app.request("/api/showcase/launch", { method: "POST" });
     expect(res.status).toBe(404);
   });
 
   it("POST /launch launches cli type and returns output", async () => {
-    // First call: read manifest. Second call: run command.
-    let callCount = 0;
     docker.execInContainer = mock((_id: string, cmd: string[]) => {
-      callCount++;
       if (cmd[0] === "cat") {
         return Promise.resolve(JSON.stringify({ type: "cli", label: "Test CLI", command: "echo hello" }));
       }
       return Promise.resolve("hello\n");
     });
 
-    const res = await app.request("/api/showcase/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "cli", command: "echo hello" }),
-    });
+    const res = await app.request("/api/showcase/launch", { method: "POST" });
     const body = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(body.launched).toBe(true);
@@ -110,11 +112,7 @@ describe("showcase routes", () => {
       return Promise.resolve("");
     });
 
-    const res = await app.request("/api/showcase/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "web", command: "npm start", port: 3001 }),
-    });
+    const res = await app.request("/api/showcase/launch", { method: "POST" });
     const body = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(body.launched).toBe(true);
@@ -131,11 +129,7 @@ describe("showcase routes", () => {
       return Promise.resolve("");
     });
 
-    const res = await app.request("/api/showcase/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "document", path: "/workspace/README.md" }),
-    });
+    const res = await app.request("/api/showcase/launch", { method: "POST" });
     const body = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(body.launched).toBe(true);
@@ -151,11 +145,7 @@ describe("showcase routes", () => {
       return Promise.resolve("");
     });
 
-    const res = await app.request("/api/showcase/launch", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ type: "media", path: "/workspace/logo.png" }),
-    });
+    const res = await app.request("/api/showcase/launch", { method: "POST" });
     const body = (await res.json()) as any;
     expect(res.status).toBe(200);
     expect(body.launched).toBe(true);
@@ -169,6 +159,30 @@ describe("showcase routes", () => {
     const res = await app.request("/api/showcase/stop", { method: "POST" });
     const body = (await res.json()) as any;
     expect(body.stopped).toBe(false);
+  });
+
+  it("POST /stop kills web preview and returns stopped:true", async () => {
+    // Launch a web preview first
+    docker.execInContainer = mock((_id: string, cmd: string[]) => {
+      if (cmd[0] === "cat") {
+        return Promise.resolve(JSON.stringify({ type: "web", command: "npm start", port: 3001 }));
+      }
+      return Promise.resolve("");
+    });
+    await app.request("/api/showcase/launch", { method: "POST" });
+
+    // Now stop it
+    const res = await app.request("/api/showcase/stop", { method: "POST" });
+    const body = (await res.json()) as any;
+    expect(body.stopped).toBe(true);
+    expect(broadcaster.broadcast).toHaveBeenCalled();
+  });
+
+  // --- GET /file ---
+
+  it("GET /file returns 400 for path traversal", async () => {
+    const res = await app.request("/api/showcase/file?path=/workspace/../../etc/passwd");
+    expect(res.status).toBe(400);
   });
 
   // --- ALL /proxy/* ---

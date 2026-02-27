@@ -65,6 +65,10 @@ export function showcaseRoutes(
 
   // --- GET /status --- Preview state
   app.get("/status", (c) => {
+    // Clear stale preview if sandbox is gone
+    if (activePreview && !sandbox.containerId) {
+      activePreview = null;
+    }
     if (!activePreview) {
       return c.json({ running: false, type: null, port: null, label: null });
     }
@@ -76,7 +80,7 @@ export function showcaseRoutes(
     });
   });
 
-  // --- POST /launch --- Start a preview
+  // --- POST /launch --- Start a preview (reads everything from manifest)
   app.post("/launch", async (c) => {
     if (!sandbox.containerId) {
       return c.json({ error: "No sandbox container running" }, 503);
@@ -87,89 +91,60 @@ export function showcaseRoutes(
       return c.json({ error: "No .showcase.json manifest found" }, 404);
     }
 
-    const body = await c.req.json<{
-      type: string;
-      command?: string;
-      port?: number;
-      path?: string;
-    }>();
-
     // Stop any existing preview first
     if (activePreview) {
       await stopPreview(sandbox.containerId);
     }
 
-    const type = body.type as ShowcaseManifest["type"];
-
-    if (type === "web") {
-      const command = body.command;
-      const port = body.port;
-      if (!command || !port) {
-        return c.json({ error: "web type requires command and port" }, 400);
+    switch (manifest.type) {
+      case "web": {
+        if (!manifest.command || !manifest.port) {
+          return c.json({ error: "web type requires command and port in manifest" }, 400);
+        }
+        const execId = await docker.execDetached(sandbox.containerId, [
+          "sh", "-c", manifest.command,
+        ]);
+        activePreview = { manifest, execId, port: manifest.port };
+        broadcaster.broadcast({
+          type: "showcase_launched",
+          data: { type: "web", port: manifest.port, label: manifest.label },
+        });
+        return c.json({
+          launched: true, type: "web",
+          proxyUrl: "/api/showcase/proxy/", port: manifest.port,
+        });
       }
-      const execId = await docker.execDetached(sandbox.containerId, [
-        "sh",
-        "-c",
-        command,
-      ]);
-      activePreview = { manifest, execId, port };
-      broadcaster.broadcast({
-        type: "showcase_launched",
-        data: { type: "web", port, label: manifest.label },
-      });
-      return c.json({
-        launched: true,
-        type: "web",
-        proxyUrl: "/api/showcase/proxy/",
-        port,
-      });
-    }
 
-    if (type === "cli") {
-      const command = body.command;
-      if (!command) {
-        return c.json({ error: "cli type requires command" }, 400);
+      case "cli": {
+        if (!manifest.command) {
+          return c.json({ error: "cli type requires command in manifest" }, 400);
+        }
+        const output = await docker.execInContainer(sandbox.containerId, [
+          "sh", "-c", manifest.command,
+        ]);
+        activePreview = { manifest, execId: null, port: null };
+        return c.json({ launched: true, type: "cli", output });
       }
-      const output = await docker.execInContainer(sandbox.containerId, [
-        "sh",
-        "-c",
-        command,
-      ]);
-      activePreview = { manifest, execId: null, port: null };
-      broadcaster.broadcast({
-        type: "showcase_launched",
-        data: { type: "cli", label: manifest.label },
-      });
-      return c.json({ launched: true, type: "cli", output });
-    }
 
-    if (type === "document") {
-      const path = body.path;
-      if (!path) {
-        return c.json({ error: "document type requires path" }, 400);
+      case "document": {
+        if (!manifest.path) {
+          return c.json({ error: "document type requires path in manifest" }, 400);
+        }
+        activePreview = { manifest, execId: null, port: null };
+        return c.json({ launched: true, type: "document", path: manifest.path });
       }
-      activePreview = { manifest, execId: null, port: null };
-      broadcaster.broadcast({
-        type: "showcase_launched",
-        data: { type: "document", path, label: manifest.label },
-      });
-      return c.json({ launched: true, type: "document", path });
-    }
 
-    if (type === "media") {
-      const path = body.path;
-      if (!path) {
-        return c.json({ error: "media type requires path" }, 400);
+      case "media": {
+        if (!manifest.path) {
+          return c.json({ error: "media type requires path in manifest" }, 400);
+        }
+        activePreview = { manifest, execId: null, port: null };
+        return c.json({ launched: true, type: "media", path: manifest.path });
       }
-      activePreview = { manifest, execId: null, port: null };
-      broadcaster.broadcast({
-        type: "showcase_launched",
-        data: { type: "media", path, label: manifest.label },
-      });
-      return c.json({ launched: true, type: "media", path });
-    }
 
-    return c.json({ error: `Unknown showcase type: ${type}` }, 400);
+      default:
+        return c.json({ error: `Unknown showcase type: ${manifest.type}` }, 400);
+    }
   });
 
   // --- POST /stop --- Kill preview
@@ -226,8 +201,8 @@ export function showcaseRoutes(
     }
 
     const path = c.req.query("path");
-    if (!path || !path.startsWith("/workspace")) {
-      return c.json({ error: "path query param required, must start with /workspace" }, 400);
+    if (!path || !path.startsWith("/workspace") || path.includes("..")) {
+      return c.json({ error: "path query param required, must start with /workspace, no traversal" }, 400);
     }
 
     try {
