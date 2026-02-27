@@ -27,6 +27,9 @@
 - Periodically run the full project (build, start, test commands) to catch regressions.
 - If you find bugs during QA, add fix tasks to .tasks.md and prioritize them as High.
 
+## Showcase
+- When your work is ready to demo, read /state/SHOWCASE.md for the showcase protocol.
+
 ## Memory Protocol
 - FINAL action: write /workspace/.memory.md (under 300 words):
   1. What you did (files, commands, results)
